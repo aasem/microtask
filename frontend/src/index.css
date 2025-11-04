@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-text font-sans antialiased;
+    font-family: 'Inter', 'Roboto', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  h1 {
+    @apply text-3xl font-bold mb-4;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold mb-3;
+  }
+
+  h3 {
+    @apply text-xl font-semibold mb-2;
+  }
+
+  input, textarea, select {
+    @apply rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent;
+  }
+
+  button {
+    @apply rounded px-4 py-2 font-medium transition-colors;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-opacity-90;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-white hover:bg-opacity-90;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white hover:bg-opacity-90;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+  }
+
+  .card {
+    @apply bg-white rounded shadow-sm p-4;
+  }
+
+  .badge {
+    @apply inline-block px-2 py-1 text-xs font-semibold rounded;
+  }
+
+  .badge-high {
+    @apply bg-danger text-white;
+  }
+
+  .badge-medium {
+    @apply bg-yellow-500 text-white;
+  }
+
+  .badge-low {
+    @apply bg-green-500 text-white;
+  }
+
+  .badge-status {
+    @apply bg-blue-100 text-blue-800;
+  }
+}
