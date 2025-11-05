@@ -3,6 +3,7 @@ import { useAuthStore } from './store/authStore';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
+import TaskView from './pages/TaskView';
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
   const { user, isAuthenticated } = useAuthStore();
@@ -37,6 +38,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tasks/:id"
+          element={
+            <ProtectedRoute>
+              <TaskView />
             </ProtectedRoute>
           }
         />

@@ -34,6 +34,18 @@ export interface TaskSummary {
   overdue: number;
 }
 
+export interface TaskHistory {
+  id: number;
+  change_type: string;
+  field_name?: string;
+  old_value?: string;
+  new_value?: string;
+  change_description?: string;
+  created_at: string;
+  changed_by_name?: string;
+  changed_by_email?: string;
+}
+
 export const taskService = {
   getAllTasks: async () => {
     const response = await api.get<{ tasks: Task[] }>('/tasks');
@@ -63,5 +75,10 @@ export const taskService = {
   getTaskSummary: async () => {
     const response = await api.get<{ summary: TaskSummary }>('/tasks/summary');
     return response.data.summary;
+  },
+
+  getTaskHistory: async (id: number) => {
+    const response = await api.get<{ history: TaskHistory[] }>(`/tasks/${id}/history`);
+    return response.data.history;
   },
 };

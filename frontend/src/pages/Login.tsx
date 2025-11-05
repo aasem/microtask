@@ -25,17 +25,20 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      console.log('Submitting login form...');
+      console.log("Submitting login form...");
       await login(email, password);
-      console.log('Login successful, navigating to dashboard');
-      navigate('/dashboard');
+      console.log("Login successful, navigating to dashboard");
+      navigate("/dashboard");
     } catch (err: any) {
-      console.error('Login form error:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Login failed. Please try again.';
+      console.error("Login form error:", err);
+      const errorMessage =
+        err.response?.data?.error ||
+        err.message ||
+        "Login failed. Please try again.";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -117,13 +120,13 @@ const Login = () => {
           </p>
           <div className="text-xs text-gray-600 space-y-1">
             <p>
-              <strong>Admin:</strong> admin@test.com / password123
+              <strong>Admin:</strong> admin@company.com / password123
             </p>
             <p>
-              <strong>Manager:</strong> manager1@test.com / password123
+              <strong>Manager:</strong> manager1@company.com / password123
             </p>
             <p>
-              <strong>User:</strong> john@test.com / password123
+              <strong>User:</strong> john@company.com / password123
             </p>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, User, Edit, Trash2, AlertCircle } from 'lucide-react';
 import { Task } from '../services/taskService';
 import { getPriorityColor, getStatusColor } from '../utils/roleUtils';
@@ -12,15 +13,31 @@ interface TaskCardProps {
 }
 
 const TaskCard = ({ task, onEdit, onDelete, canEdit, canDelete }: TaskCardProps) => {
+  const navigate = useNavigate();
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed';
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on action buttons
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    navigate(`/tasks/${task.id}`);
+  };
+
   return (
-    <div className={`card hover:shadow-md transition-shadow ${isOverdue ? 'border-l-4 border-danger' : ''}`}>
+    <div 
+      className={`card hover:shadow-md transition-shadow cursor-pointer ${isOverdue ? 'border-l-4 border-danger' : ''}`}
+      onClick={handleCardClick}
+    >
       <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
             <h3 className="text-lg font-semibold text-gray-900">{task.title}</h3>
-            {isOverdue && <AlertCircle className="w-5 h-5 text-danger" title="Overdue" />}
+            {isOverdue && (
+              <span title="Overdue">
+                <AlertCircle className="w-5 h-5 text-danger" />
+              </span>
+            )}
           </div>
           {task.description && (
             <p className="text-sm text-gray-600 mb-2 line-clamp-2">{task.description}</p>

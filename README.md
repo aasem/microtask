@@ -16,6 +16,13 @@ A comprehensive, role-based task management web application built with React, Ex
   - Add due dates and tags
   - Create subtasks
   - Add notes and comments
+  - **Task History Tracking**: View complete timeline of all changes made to a task
+    - Status changes
+    - Assignment changes
+    - Tag modifications
+    - Due date updates
+    - New subtasks added
+    - Notes updates
 
 - **Dashboard & Analytics**
   - Real-time task summary (Total, In Progress, Completed, Overdue)
@@ -209,6 +216,7 @@ TaskTodoApp/
 ### Tasks
 - `GET /api/v1/tasks` - Get all tasks (filtered by role)
 - `GET /api/v1/tasks/:id` - Get task by ID
+- `GET /api/v1/tasks/:id/history` - Get task history timeline
 - `POST /api/v1/tasks` - Create task (Admin, Manager)
 - `PUT /api/v1/tasks/:id` - Update task
 - `DELETE /api/v1/tasks/:id` - Delete task (Admin, Manager)

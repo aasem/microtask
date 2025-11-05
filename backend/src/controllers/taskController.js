@@ -1,5 +1,25 @@
 const { getConnection, sql } = require('../config/database');
 
+// Helper function to log task history
+const logTaskHistory = async (pool, taskId, changedBy, changeType, fieldName, oldValue, newValue, description) => {
+  try {
+    await pool.request()
+      .input('task_id', sql.Int, taskId)
+      .input('changed_by', sql.Int, changedBy)
+      .input('change_type', sql.VarChar, changeType)
+      .input('field_name', sql.VarChar, fieldName || null)
+      .input('old_value', sql.Text, oldValue ? String(oldValue) : null)
+      .input('new_value', sql.Text, newValue ? String(newValue) : null)
+      .input('change_description', sql.Text, description || null)
+      .query(`
+        INSERT INTO TaskHistory (task_id, changed_by, change_type, field_name, old_value, new_value, change_description)
+        VALUES (@task_id, @changed_by, @change_type, @field_name, @old_value, @new_value, @change_description)
+      `);
+  } catch (error) {
+    console.error('Error logging task history:', error);
+  }
+};
+
 const getAllTasks = async (req, res) => {
   try {
     const pool = await getConnection();
@@ -128,6 +148,18 @@ const createTask = async (req, res) => {
 
     const taskId = result.recordset[0].id;
 
+    // Log task creation
+    await logTaskHistory(
+      pool,
+      taskId,
+      req.user.id,
+      'task_created',
+      null,
+      null,
+      null,
+      `Task "${title}" created`
+    );
+
     // Insert subtasks if provided
     if (subtasks && subtasks.length > 0) {
       for (const subtask of subtasks) {
@@ -139,6 +171,18 @@ const createTask = async (req, res) => {
             INSERT INTO Subtasks (task_id, title, status)
             VALUES (@task_id, @title, @status)
           `);
+        
+        // Log subtask creation
+        await logTaskHistory(
+          pool,
+          taskId,
+          req.user.id,
+          'subtask_added',
+          'subtask',
+          null,
+          subtask.title,
+          `Subtask "${subtask.title}" added`
+        );
       }
     }
 
@@ -172,7 +216,7 @@ const updateTask = async (req, res) => {
     // Check if task exists and get current data
     const taskCheck = await pool.request()
       .input('id', sql.Int, id)
-      .query('SELECT assigned_to, created_by FROM Tasks WHERE id = @id');
+      .query('SELECT * FROM Tasks WHERE id = @id');
 
     if (taskCheck.recordset.length === 0) {
       return res.status(404).json({ error: 'Task not found' });
@@ -183,6 +227,24 @@ const updateTask = async (req, res) => {
     // Permission check
     if (req.user.role === 'user' && task.assigned_to !== req.user.id) {
       return res.status(403).json({ error: 'You can only edit tasks assigned to you' });
+    }
+
+    // Get assigned user names for history logging
+    let oldAssignedName = null;
+    let newAssignedName = null;
+    if (assigned_to !== undefined && assigned_to !== task.assigned_to && req.user.role !== 'user') {
+      if (task.assigned_to) {
+        const oldUser = await pool.request()
+          .input('userId', sql.Int, task.assigned_to)
+          .query('SELECT name FROM Users WHERE id = @userId');
+        oldAssignedName = oldUser.recordset[0]?.name;
+      }
+      if (assigned_to) {
+        const newUser = await pool.request()
+          .input('userId', sql.Int, assigned_to)
+          .query('SELECT name FROM Users WHERE id = @userId');
+        newAssignedName = newUser.recordset[0]?.name;
+      }
     }
 
     // Build update query
@@ -197,29 +259,95 @@ const updateTask = async (req, res) => {
       updateFields.push('description = @description');
       request.input('description', sql.Text, description);
     }
-    if (priority !== undefined) {
+    if (priority !== undefined && priority !== task.priority) {
       updateFields.push('priority = @priority');
       request.input('priority', sql.VarChar, priority);
+      // Log priority change
+      await logTaskHistory(
+        pool,
+        id,
+        req.user.id,
+        'priority_change',
+        'priority',
+        task.priority,
+        priority,
+        `Priority changed from ${task.priority} to ${priority}`
+      );
     }
-    if (assigned_to !== undefined && req.user.role !== 'user') {
+    if (assigned_to !== undefined && assigned_to !== task.assigned_to && req.user.role !== 'user') {
       updateFields.push('assigned_to = @assigned_to');
       request.input('assigned_to', sql.Int, assigned_to);
+      // Log assignment change
+      await logTaskHistory(
+        pool,
+        id,
+        req.user.id,
+        'assignment_change',
+        'assigned_to',
+        oldAssignedName || 'Unassigned',
+        newAssignedName || 'Unassigned',
+        `Task reassigned from ${oldAssignedName || 'Unassigned'} to ${newAssignedName || 'Unassigned'}`
+      );
     }
-    if (due_date !== undefined) {
+    if (due_date !== undefined && due_date !== task.due_date) {
       updateFields.push('due_date = @due_date');
       request.input('due_date', sql.Date, due_date);
+      // Log due date change
+      await logTaskHistory(
+        pool,
+        id,
+        req.user.id,
+        'due_date_change',
+        'due_date',
+        task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : 'None',
+        due_date ? new Date(due_date).toISOString().split('T')[0] : 'None',
+        `Due date changed from ${task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : 'None'} to ${due_date ? new Date(due_date).toISOString().split('T')[0] : 'None'}`
+      );
     }
-    if (status !== undefined) {
+    if (status !== undefined && status !== task.status) {
       updateFields.push('status = @status');
       request.input('status', sql.VarChar, status);
+      // Log status change
+      await logTaskHistory(
+        pool,
+        id,
+        req.user.id,
+        'status_change',
+        'status',
+        task.status,
+        status,
+        `Status changed from ${task.status} to ${status}`
+      );
     }
-    if (tags !== undefined) {
+    if (tags !== undefined && tags !== task.tags) {
       updateFields.push('tags = @tags');
       request.input('tags', sql.VarChar, tags);
+      // Log tags change
+      await logTaskHistory(
+        pool,
+        id,
+        req.user.id,
+        'tags_change',
+        'tags',
+        task.tags || 'None',
+        tags || 'None',
+        `Tags changed from "${task.tags || 'None'}" to "${tags || 'None'}"`
+      );
     }
-    if (notes !== undefined) {
+    if (notes !== undefined && notes !== task.notes) {
       updateFields.push('notes = @notes');
       request.input('notes', sql.Text, notes);
+      // Log notes update
+      await logTaskHistory(
+        pool,
+        id,
+        req.user.id,
+        'notes_updated',
+        'notes',
+        null,
+        null,
+        'Notes updated'
+      );
     }
 
     if (updateFields.length > 0) {
@@ -228,6 +356,13 @@ const updateTask = async (req, res) => {
 
     // Update subtasks if provided
     if (subtasks) {
+      // Get existing subtasks for comparison
+      const existingSubtasks = await pool.request()
+        .input('taskId', sql.Int, id)
+        .query('SELECT id, title FROM Subtasks WHERE task_id = @taskId');
+      
+      const existingTitles = existingSubtasks.recordset.map(st => st.title);
+      
       // Delete existing subtasks
       await pool.request()
         .input('taskId', sql.Int, id)
@@ -243,6 +378,20 @@ const updateTask = async (req, res) => {
             INSERT INTO Subtasks (task_id, title, status)
             VALUES (@task_id, @title, @status)
           `);
+        
+        // Log if this is a new subtask
+        if (!existingTitles.includes(subtask.title)) {
+          await logTaskHistory(
+            pool,
+            id,
+            req.user.id,
+            'subtask_added',
+            'subtask',
+            null,
+            subtask.title,
+            `Subtask "${subtask.title}" added`
+          );
+        }
       }
     }
 
@@ -322,6 +471,48 @@ const getTaskSummary = async (req, res) => {
   }
 };
 
+const getTaskHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pool = await getConnection();
+
+    // Check if task exists
+    const taskCheck = await pool.request()
+      .input('id', sql.Int, id)
+      .query('SELECT id, assigned_to FROM Tasks WHERE id = @id');
+
+    if (taskCheck.recordset.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const task = taskCheck.recordset[0];
+
+    // Permission check
+    if (req.user.role === 'user' && task.assigned_to !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Fetch task history
+    const result = await pool.request()
+      .input('taskId', sql.Int, id)
+      .query(`
+        SELECT 
+          th.id, th.change_type, th.field_name, th.old_value, th.new_value, 
+          th.change_description, th.created_at,
+          u.name as changed_by_name, u.email as changed_by_email
+        FROM TaskHistory th
+        LEFT JOIN Users u ON th.changed_by = u.id
+        WHERE th.task_id = @taskId
+        ORDER BY th.created_at DESC
+      `);
+
+    res.json({ history: result.recordset });
+  } catch (error) {
+    console.error('Get task history error:', error);
+    res.status(500).json({ error: 'Failed to fetch task history' });
+  }
+};
+
 module.exports = {
   getAllTasks,
   getTaskById,
@@ -329,4 +520,5 @@ module.exports = {
   updateTask,
   deleteTask,
   getTaskSummary,
+  getTaskHistory,
 };

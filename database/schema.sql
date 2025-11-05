@@ -9,6 +9,7 @@ USE TaskManagementDB;
 GO
 
 -- Drop tables if they exist (for clean setup)
+IF OBJECT_ID('TaskHistory', 'U') IS NOT NULL DROP TABLE TaskHistory;
 IF OBJECT_ID('Subtasks', 'U') IS NOT NULL DROP TABLE Subtasks;
 IF OBJECT_ID('Tasks', 'U') IS NOT NULL DROP TABLE Tasks;
 IF OBJECT_ID('Users', 'U') IS NOT NULL DROP TABLE Users;
@@ -53,12 +54,31 @@ CREATE TABLE Subtasks (
 );
 GO
 
+-- TaskHistory Table
+CREATE TABLE TaskHistory (
+    id INT PRIMARY KEY IDENTITY(1,1),
+    task_id INT NOT NULL,
+    changed_by INT NOT NULL,
+    change_type VARCHAR(50) NOT NULL CHECK (change_type IN ('status_change', 'assignment_change', 'tags_change', 'due_date_change', 'subtask_added', 'notes_updated', 'priority_change', 'task_created')),
+    field_name VARCHAR(50),
+    old_value TEXT,
+    new_value TEXT,
+    change_description TEXT,
+    created_at DATETIME NOT NULL DEFAULT GETDATE(),
+    FOREIGN KEY (task_id) REFERENCES Tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (changed_by) REFERENCES Users(id) ON DELETE NO ACTION
+);
+GO
+
 -- Create Indexes for better performance
 CREATE INDEX idx_tasks_assigned_to ON Tasks(assigned_to);
 CREATE INDEX idx_tasks_created_by ON Tasks(created_by);
 CREATE INDEX idx_tasks_status ON Tasks(status);
 CREATE INDEX idx_tasks_due_date ON Tasks(due_date);
 CREATE INDEX idx_subtasks_task_id ON Subtasks(task_id);
+CREATE INDEX idx_taskhistory_task_id ON TaskHistory(task_id);
+CREATE INDEX idx_taskhistory_changed_by ON TaskHistory(changed_by);
+CREATE INDEX idx_taskhistory_created_at ON TaskHistory(created_at);
 GO
 
 PRINT 'Database schema created successfully!';
