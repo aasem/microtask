@@ -2,14 +2,16 @@ const sql = require("mssql");
 require("dotenv").config();
 
 const config = {
-  server: process.env.DB_SERVER,
+  server: process.env.DB_SERVER || "localhost",
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
+  port: parseInt(process.env.DB_PORT) || undefined,
   options: {
     encrypt: process.env.DB_ENCRYPT === "true",
     trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === "true",
     enableArithAbort: true,
+    instanceName: process.env.DB_PORT ? undefined : (process.env.DB_INSTANCE || "SQLEXPRESS"),
   },
   pool: {
     max: 10,
@@ -17,6 +19,8 @@ const config = {
     idleTimeoutMillis: 30000,
   },
 };
+
+console.log(config);
 
 let pool = null;
 

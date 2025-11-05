@@ -24,12 +24,15 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async (email: string, password: string) => {
     try {
+      console.log('Attempting login for:', email);
       const response = await api.post('/auth/login', { email, password });
+      console.log('Login response:', response.data);
       const { token, user } = response.data;
       
       localStorage.setItem('token', token);
       set({ user, token, isAuthenticated: true });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login error:', error.response?.data || error.message);
       throw error;
     }
   },

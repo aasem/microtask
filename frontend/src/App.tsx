@@ -23,6 +23,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/auth/signin" element={<Navigate to="/login" replace />} />
         <Route
           path="/dashboard"
           element={
@@ -40,6 +41,7 @@ function App() {
           }
         />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

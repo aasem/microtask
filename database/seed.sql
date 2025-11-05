@@ -9,12 +9,9 @@ GO
 -- Note: In production, generate proper hashed passwords using bcrypt
 -- The hash below is for "password123"
 INSERT INTO Users (name, email, password_hash, role) VALUES
-('Admin User', 'admin@company.com', '$2a$10$rXJQ9EqKJHvgKZ7tZqxOXOzH8vXp5LJx3pOy3vXqK5yqZ5KJ7qZqO', 'admin'),
-('Manager One', 'manager1@company.com', '$2a$10$rXJQ9EqKJHvgKZ7tZqxOXOzH8vXp5LJx3pOy3vXqK5yqZ5KJ7qZqO', 'manager'),
-('Manager Two', 'manager2@company.com', '$2a$10$rXJQ9EqKJHvgKZ7tZqxOXOzH8vXp5LJx3pOy3vXqK5yqZ5KJ7qZqO', 'manager'),
-('John Doe', 'john@company.com', '$2a$10$rXJQ9EqKJHvgKZ7tZqxOXOzH8vXp5LJx3pOy3vXqK5yqZ5KJ7qZqO', 'user'),
-('Jane Smith', 'jane@company.com', '$2a$10$rXJQ9EqKJHvgKZ7tZqxOXOzH8vXp5LJx3pOy3vXqK5yqZ5KJ7qZqO', 'user'),
-('Bob Wilson', 'bob@company.com', '$2a$10$rXJQ9EqKJHvgKZ7tZqxOXOzH8vXp5LJx3pOy3vXqK5yqZ5KJ7qZqO', 'user');
+('Admin User', 'admin@company.com', '$2a$10$PL8YKbKhy3OSlmEPQOshre7Wfg.Uwzml5DPiKbBs/LEQnrTwENQcu', 'admin'),
+('Manager One', 'manager1@company.com', '$2a$10$PL8YKbKhy3OSlmEPQOshre7Wfg.Uwzml5DPiKbBs/LEQnrTwENQcu', 'manager'),
+('John Doe', 'john@company.com', '$2a$10$PL8YKbKhy3OSlmEPQOshre7Wfg.Uwzml5DPiKbBs/LEQnrTwENQcu', 'user')
 GO
 
 -- Insert sample tasks

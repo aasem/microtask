@@ -1,20 +1,25 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { LogIn } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
+import { LogIn } from "lucide-react";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { login, isAuthenticated } = useAuthStore();
+  const { login, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Clear any stale authentication on mount
+    logout();
+  }, []);
+
+  useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
@@ -24,10 +29,14 @@ const Login = () => {
     setLoading(true);
 
     try {
+      console.log('Submitting login form...');
       await login(email, password);
+      console.log('Login successful, navigating to dashboard');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
+      console.error('Login form error:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Login failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -55,7 +64,10 @@ const Login = () => {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Email Address
             </label>
             <input
@@ -71,7 +83,10 @@ const Login = () => {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Password
             </label>
             <input
@@ -91,17 +106,25 @@ const Login = () => {
             disabled={loading}
             className="w-full btn-primary py-3 text-base"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         {/* Demo Credentials */}
         <div className="mt-6 p-4 bg-gray-50 rounded border border-gray-200">
-          <p className="text-sm font-semibold text-gray-700 mb-2">Demo Credentials:</p>
+          <p className="text-sm font-semibold text-gray-700 mb-2">
+            Demo Credentials:
+          </p>
           <div className="text-xs text-gray-600 space-y-1">
-            <p><strong>Admin:</strong> admin@company.com / password123</p>
-            <p><strong>Manager:</strong> manager1@company.com / password123</p>
-            <p><strong>User:</strong> john@company.com / password123</p>
+            <p>
+              <strong>Admin:</strong> admin@test.com / password123
+            </p>
+            <p>
+              <strong>Manager:</strong> manager1@test.com / password123
+            </p>
+            <p>
+              <strong>User:</strong> john@test.com / password123
+            </p>
           </div>
         </div>
       </div>
