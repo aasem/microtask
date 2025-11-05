@@ -1,28 +1,41 @@
-import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
-import Header from '../components/Header';
-import Sidebar from '../components/Sidebar';
-import TaskCard from '../components/TaskCard';
-import TaskModal from '../components/TaskModal';
-import DashboardCards from '../components/DashboardCards';
-import Toast from '../components/Toast';
-import { useTaskStore } from '../store/taskStore';
-import { useAuthStore } from '../store/authStore';
-import { Task } from '../services/taskService';
-import { canCreateTask, canDeleteTask, canEditTask } from '../utils/roleUtils';
+import { useState, useEffect } from "react";
+import { Plus } from "lucide-react";
+import Header from "../components/Header";
+import Sidebar from "../components/Sidebar";
+import TaskCard from "../components/TaskCard";
+import TaskModal from "../components/TaskModal";
+import DashboardCards from "../components/DashboardCards";
+import Toast from "../components/Toast";
+import { useTaskStore } from "../store/taskStore";
+import { useAuthStore } from "../store/authStore";
+import { Task } from "../services/taskService";
+import { canCreateTask, canDeleteTask, canEditTask } from "../utils/roleUtils";
 
 const Dashboard = () => {
   const { user } = useAuthStore();
-  const { tasks, summary, loading, error, fetchTasks, fetchSummary, createTask, updateTask, deleteTask } = useTaskStore();
-  
+  const {
+    tasks,
+    summary,
+    loading,
+    error,
+    fetchTasks,
+    fetchSummary,
+    createTask,
+    updateTask,
+    deleteTask,
+  } = useTaskStore();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filters, setFilters] = useState({
     priority: [] as string[],
-    status: '',
-    dueDateRange: { start: '', end: '' },
+    status: "",
+    dueDateRange: { start: "", end: "" },
   });
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -37,23 +50,23 @@ const Dashboard = () => {
   const handleEditTask = async (task: Task) => {
     try {
       // Fetch full task details including subtasks
-      const { taskService } = await import('../services/taskService');
+      const { taskService } = await import("../services/taskService");
       const fullTask = await taskService.getTaskById(task.id);
       setSelectedTask(fullTask);
       setIsModalOpen(true);
     } catch (error) {
-      console.error('Failed to fetch task details:', error);
-      setToast({ message: 'Failed to load task details', type: 'error' });
+      console.error("Failed to fetch task details:", error);
+      setToast({ message: "Failed to load task details", type: "error" });
     }
   };
 
   const handleDeleteTask = async (taskId: number) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
+    if (window.confirm("Are you sure you want to delete this task?")) {
       try {
         await deleteTask(taskId);
-        setToast({ message: 'Task deleted successfully', type: 'success' });
+        setToast({ message: "Task deleted successfully", type: "success" });
       } catch (err) {
-        setToast({ message: 'Failed to delete task', type: 'error' });
+        setToast({ message: "Failed to delete task", type: "error" });
       }
     }
   };
@@ -62,10 +75,10 @@ const Dashboard = () => {
     try {
       if (selectedTask) {
         await updateTask(selectedTask.id, taskData);
-        setToast({ message: 'Task updated successfully', type: 'success' });
+        setToast({ message: "Task updated successfully", type: "success" });
       } else {
         await createTask(taskData);
-        setToast({ message: 'Task created successfully', type: 'success' });
+        setToast({ message: "Task created successfully", type: "success" });
       }
       setIsModalOpen(false);
     } catch (err) {
@@ -74,9 +87,12 @@ const Dashboard = () => {
   };
 
   // Filter tasks
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = tasks.filter((task) => {
     // Priority filter
-    if (filters.priority.length > 0 && !filters.priority.includes(task.priority)) {
+    if (
+      filters.priority.length > 0 &&
+      !filters.priority.includes(task.priority)
+    ) {
       return false;
     }
 
@@ -103,26 +119,29 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Summary Cards */}
         {summary && <DashboardCards summary={summary} />}
 
         {/* Main Content */}
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-8 mt-2">
           {/* Sidebar Filters */}
           <div className="lg:w-64 flex-shrink-0">
             <Sidebar filters={filters} onFilterChange={setFilters} />
           </div>
 
           {/* Task List */}
-          <div className="flex-1">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
+          <div className="flex-1 ml-3">
+            <div className="flex justify-end items-center mb-2">
+              {/* <h2 className="text-2xl font-bold text-gray-900">
                 Tasks ({filteredTasks.length})
-              </h2>
+              </h2> */}
               {user && canCreateTask(user.role) && (
-                <button onClick={handleCreateTask} className="btn-primary flex items-center space-x-2">
+                <button
+                  onClick={handleCreateTask}
+                  className="btn-primary flex items-center space-x-2"
+                >
                   <Plus className="w-5 h-5" />
                   <span>Add Task</span>
                 </button>
@@ -146,7 +165,10 @@ const Dashboard = () => {
               <div className="text-center py-12 card">
                 <p className="text-gray-600">No tasks found</p>
                 {user && canCreateTask(user.role) && (
-                  <button onClick={handleCreateTask} className="mt-4 btn-accent">
+                  <button
+                    onClick={handleCreateTask}
+                    className="mt-4 btn-accent"
+                  >
                     Create Your First Task
                   </button>
                 )}
@@ -155,13 +177,17 @@ const Dashboard = () => {
 
             {!loading && !error && filteredTasks.length > 0 && (
               <div className="space-y-4">
-                {filteredTasks.map(task => (
+                {filteredTasks.map((task) => (
                   <TaskCard
                     key={task.id}
                     task={task}
                     onEdit={handleEditTask}
                     onDelete={handleDeleteTask}
-                    canEdit={user ? canEditTask(user.role, task.assigned_to || 0, user.id) : false}
+                    canEdit={
+                      user
+                        ? canEditTask(user.role, task.assigned_to || 0, user.id)
+                        : false
+                    }
                     canDelete={user ? canDeleteTask(user.role) : false}
                   />
                 ))}

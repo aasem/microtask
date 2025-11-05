@@ -29,7 +29,7 @@ const getAllTasks = async (req, res) => {
     let query = `
       SELECT 
         t.id, t.title, t.description, t.priority, t.assigned_to, t.assignment_date, 
-        t.due_date, t.status, t.tags, t.notes, t.created_by,
+        t.due_date, t.status, t.notes, t.created_by,
         u.name as assigned_to_name, u.email as assigned_to_email,
         c.name as created_by_name
       FROM Tasks t
@@ -51,8 +51,23 @@ const getAllTasks = async (req, res) => {
     }
 
     const result = await request.query(query);
+    const tasks = result.recordset;
 
-    res.json({ tasks: result.recordset });
+    // Fetch tags for all tasks
+    for (const task of tasks) {
+      const tagsResult = await pool.request()
+        .input('taskId', sql.Int, task.id)
+        .query(`
+          SELECT tg.id, tg.name
+          FROM Tags tg
+          INNER JOIN TaskTags tt ON tg.id = tt.tag_id
+          WHERE tt.task_id = @taskId
+          ORDER BY tg.name
+        `);
+      task.tags = tagsResult.recordset;
+    }
+
+    res.json({ tasks });
   } catch (error) {
     console.error('Get all tasks error:', error);
     res.status(500).json({ error: 'Failed to fetch tasks' });
@@ -69,7 +84,7 @@ const getTaskById = async (req, res) => {
       .query(`
         SELECT 
           t.id, t.title, t.description, t.priority, t.assigned_to, t.assignment_date, 
-          t.due_date, t.status, t.tags, t.notes, t.created_by,
+          t.due_date, t.status, t.notes, t.created_by,
           u.name as assigned_to_name, u.email as assigned_to_email,
           c.name as created_by_name
         FROM Tasks t
@@ -88,6 +103,18 @@ const getTaskById = async (req, res) => {
     if (req.user.role === 'user' && task.assigned_to !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
+
+    // Fetch tags
+    const tagsResult = await pool.request()
+      .input('taskId', sql.Int, id)
+      .query(`
+        SELECT tg.id, tg.name
+        FROM Tags tg
+        INNER JOIN TaskTags tt ON tg.id = tt.tag_id
+        WHERE tt.task_id = @taskId
+        ORDER BY tg.name
+      `);
+    task.tags = tagsResult.recordset;
 
     // Fetch subtasks
     const subtasksResult = await pool.request()
@@ -112,7 +139,7 @@ const createTask = async (req, res) => {
       assigned_to,
       due_date,
       status = 'not_started',
-      tags,
+      tag_ids = [],
       notes,
       subtasks = []
     } = req.body;
@@ -138,11 +165,10 @@ const createTask = async (req, res) => {
       .input('assignment_date', sql.Date, new Date())
       .input('due_date', sql.Date, due_date || null)
       .input('status', sql.VarChar, status)
-      .input('tags', sql.VarChar, tags || null)
       .input('notes', sql.Text, notes || null)
       .query(`
-        INSERT INTO Tasks (title, description, priority, assigned_to, created_by, assignment_date, due_date, status, tags, notes)
-        VALUES (@title, @description, @priority, @assigned_to, @created_by, @assignment_date, @due_date, @status, @tags, @notes);
+        INSERT INTO Tasks (title, description, priority, assigned_to, created_by, assignment_date, due_date, status, notes)
+        VALUES (@title, @description, @priority, @assigned_to, @created_by, @assignment_date, @due_date, @status, @notes);
         SELECT SCOPE_IDENTITY() AS id;
       `);
 
@@ -159,6 +185,37 @@ const createTask = async (req, res) => {
       null,
       `Task "${title}" created`
     );
+
+    // Insert tag associations
+    if (tag_ids && tag_ids.length > 0) {
+      for (const tagId of tag_ids) {
+        await pool.request()
+          .input('task_id', sql.Int, taskId)
+          .input('tag_id', sql.Int, tagId)
+          .query(`
+            INSERT INTO TaskTags (task_id, tag_id)
+            VALUES (@task_id, @tag_id)
+          `);
+      }
+      
+      // Get tag names for logging
+      const tagNames = await pool.request()
+        .query(`
+          SELECT name FROM Tags WHERE id IN (${tag_ids.join(',')})
+        `);
+      const tagNamesList = tagNames.recordset.map(t => t.name).join(', ');
+      
+      await logTaskHistory(
+        pool,
+        taskId,
+        req.user.id,
+        'tags_change',
+        'tags',
+        null,
+        tagNamesList,
+        `Tags added: ${tagNamesList}`
+      );
+    }
 
     // Insert subtasks if provided
     if (subtasks && subtasks.length > 0) {
@@ -206,7 +263,7 @@ const updateTask = async (req, res) => {
       assigned_to,
       due_date,
       status,
-      tags,
+      tag_ids,
       notes,
       subtasks
     } = req.body;
@@ -325,20 +382,72 @@ const updateTask = async (req, res) => {
         `Status changed from ${task.status} to ${status}`
       );
     }
-    if (tags !== undefined && tags !== task.tags) {
-      updateFields.push('tags = @tags');
-      request.input('tags', sql.VarChar, tags);
-      // Log tags change
-      await logTaskHistory(
-        pool,
-        id,
-        req.user.id,
-        'tags_change',
-        'tags',
-        task.tags || 'None',
-        tags || 'None',
-        `Tags changed from "${task.tags || 'None'}" to "${tags || 'None'}"`
-      );
+    // Handle tag updates
+    if (tag_ids !== undefined) {
+      // Get existing tags
+      const existingTags = await pool.request()
+        .input('taskId', sql.Int, id)
+        .query(`
+          SELECT tg.id, tg.name
+          FROM Tags tg
+          INNER JOIN TaskTags tt ON tg.id = tt.tag_id
+          WHERE tt.task_id = @taskId
+        `);
+      
+      const existingTagIds = existingTags.recordset.map(t => t.id);
+      const existingTagNames = existingTags.recordset.map(t => t.name).join(', ');
+      
+      // Delete existing tag associations
+      await pool.request()
+        .input('taskId', sql.Int, id)
+        .query('DELETE FROM TaskTags WHERE task_id = @taskId');
+      
+      // Insert new tag associations
+      if (tag_ids && tag_ids.length > 0) {
+        for (const tagId of tag_ids) {
+          await pool.request()
+            .input('task_id', sql.Int, id)
+            .input('tag_id', sql.Int, tagId)
+            .query(`
+              INSERT INTO TaskTags (task_id, tag_id)
+              VALUES (@task_id, @tag_id)
+            `);
+        }
+        
+        // Get new tag names for logging
+        const newTags = await pool.request()
+          .query(`
+            SELECT name FROM Tags WHERE id IN (${tag_ids.join(',')})
+          `);
+        const newTagNames = newTags.recordset.map(t => t.name).join(', ');
+        
+        // Log tags change if different
+        const tagsChanged = JSON.stringify(existingTagIds.sort()) !== JSON.stringify(tag_ids.sort());
+        if (tagsChanged) {
+          await logTaskHistory(
+            pool,
+            id,
+            req.user.id,
+            'tags_change',
+            'tags',
+            existingTagNames || 'None',
+            newTagNames,
+            `Tags changed from "${existingTagNames || 'None'}" to "${newTagNames}"`
+          );
+        }
+      } else if (existingTagIds.length > 0) {
+        // All tags removed
+        await logTaskHistory(
+          pool,
+          id,
+          req.user.id,
+          'tags_change',
+          'tags',
+          existingTagNames,
+          'None',
+          `All tags removed (was: "${existingTagNames}")`
+        );
+      }
     }
     if (notes !== undefined && notes !== task.notes) {
       updateFields.push('notes = @notes');

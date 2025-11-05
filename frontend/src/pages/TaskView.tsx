@@ -112,58 +112,91 @@ const TaskView = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Header */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Header with Back Button and Quick Actions */}
       <div className="mb-6 flex items-center justify-between">
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center text-[#002B5B] hover:text-[#1A936F] transition"
+          className="flex items-center text-primary hover:text-accent transition-colors gap-2 py-2 px-4 rounded-lg bg-white shadow-sm"
         >
-          <ArrowLeft className="w-5 h-5 mr-2" />
+          <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </button>
+        
+        <div className="flex items-center gap-2">
+          {/* Could add action buttons here like edit, share, etc */}
+        </div>
       </div>
 
-      {/* Task Header */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-[#222222] mb-2">{task.title}</h1>
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getPriorityColor(task.priority)}`}>
-                {task.priority.toUpperCase()}
-              </span>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(task.status)}`}>
-                {task.status.replace('_', ' ').toUpperCase()}
-              </span>
+      {/* Task Header with Status Banner */}
+      <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
+        <div className={`h-2 ${task.status === 'completed' ? 'bg-green-500' : task.status === 'in_progress' ? 'bg-blue-500' : task.status === 'blocked' ? 'bg-red-500' : 'bg-gray-300'}`}></div>
+        
+        <div className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              {/* Title and status indicator */}
+              <div className="flex items-center gap-3 mb-3">
+                <span className={`status-dot ${task.status === 'completed' ? 'status-completed' : task.status === 'in_progress' ? 'status-in-progress' : task.status === 'blocked' ? 'status-blocked' : 'status-not-started'}`}></span>
+                <h1 className="text-2xl font-bold text-gray-900">{task.title}</h1>
+              </div>
+              
+              {/* Badges for priority and status */}
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                <span className={`badge ${getPriorityColor(task.priority)}`}>
+                  {task.priority.toUpperCase()}
+                </span>
+                <span className={`badge ${getStatusColor(task.status)}`}>
+                  {task.status.replace('_', ' ').toUpperCase()}
+                </span>
+                
+                {task.tags && task.tags.map((tag) => (
+                  <span key={tag.id} className="badge bg-gray-100 text-gray-700 border border-gray-200">
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+              
+              {/* Quick info */}
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-600">
+                {task.assigned_to_name && (
+                  <div className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-accent" />
+                    <span>Assigned to {task.assigned_to_name}</span>
+                  </div>
+                )}
+                
+                {task.due_date && (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-accent" />
+                    <span>Due {format(new Date(task.due_date), 'MMM dd, yyyy')}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-md mb-6">
-        <div className="border-b border-gray-200">
+      {/* Tab Navigation */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+        <div className="border-b border-gray-100">
           <div className="flex">
             <button
               onClick={() => setActiveTab('details')}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition ${
-                activeTab === 'details'
-                  ? 'border-[#002B5B] text-[#002B5B]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={`px-6 py-4 font-medium text-sm transition-colors relative ${activeTab === 'details' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Task Details
+              {activeTab === 'details' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>}
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition ${
-                activeTab === 'history'
-                  ? 'border-[#002B5B] text-[#002B5B]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={`px-6 py-4 font-medium text-sm transition-colors relative flex items-center gap-1.5 ${activeTab === 'history' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              History Timeline
+              <HistoryIcon className="w-4 h-4" />
+              History
+              {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>}
+              <span className="ml-1.5 bg-gray-100 text-gray-700 text-xs px-1.5 py-0.5 rounded-full">{history.length}</span>
             </button>
           </div>
         </div>
@@ -171,122 +204,166 @@ const TaskView = () => {
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'details' ? (
-            <div className="space-y-6">
-              {/* Description */}
-              {task.description && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Description</h3>
-                  <p className="text-gray-600">{task.description}</p>
-                </div>
-              )}
-
-              {/* Task Information Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Assigned To */}
-                <div className="flex items-start gap-3">
-                  <User className="w-5 h-5 text-[#1A936F] mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700">Assigned To</p>
-                    <p className="text-gray-600">{task.assigned_to_name || 'Unassigned'}</p>
-                  </div>
-                </div>
-
-                {/* Created By */}
-                <div className="flex items-start gap-3">
-                  <User className="w-5 h-5 text-[#1A936F] mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700">Created By</p>
-                    <p className="text-gray-600">{task.created_by_name || 'Unknown'}</p>
-                  </div>
-                </div>
-
-                {/* Assignment Date */}
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-[#1A936F] mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700">Assignment Date</p>
-                    <p className="text-gray-600">
-                      {format(new Date(task.assignment_date), 'MMM dd, yyyy')}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Due Date */}
-                {task.due_date && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-[#1A936F] mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700">Due Date</p>
-                      <p className="text-gray-600">
-                        {format(new Date(task.due_date), 'MMM dd, yyyy')}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tags */}
-                {task.tags && (
-                  <div className="flex items-start gap-3">
-                    <Tag className="w-5 h-5 text-[#1A936F] mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700">Tags</p>
-                      <p className="text-gray-600">{task.tags}</p>
-                    </div>
-                  </div>
+            <div className="space-y-8">
+              {/* Description Panel */}
+              <div className="bg-gray-50 rounded-lg p-5 border border-gray-100">
+                <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-accent" />
+                  Description
+                </h3>
+                {task.description ? (
+                  <p className="text-gray-700 whitespace-pre-wrap">{task.description}</p>
+                ) : (
+                  <p className="text-gray-500 italic">No description provided</p>
                 )}
               </div>
 
-              {/* Notes */}
-              {task.notes && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-[#1A936F]" />
-                    Notes
-                  </h3>
-                  <p className="text-gray-600 bg-gray-50 p-4 rounded-lg">{task.notes}</p>
-                </div>
-              )}
+              {/* Two column layout for task details */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left column - Task Information */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Task Details Card */}
+                  <div className="bg-white rounded-lg border border-gray-100 shadow-sm">
+                    <div className="p-4 border-b border-gray-100">
+                      <h3 className="font-semibold text-gray-800">Task Information</h3>
+                    </div>
+                    <div className="p-4">
+                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Assigned To */}
+                        <div className="flex flex-col">
+                          <dt className="text-xs font-medium text-gray-500 mb-1">Assigned To</dt>
+                          <dd className="text-sm text-gray-700 flex items-center gap-1.5">
+                            <User className="w-4 h-4 text-accent" />
+                            {task.assigned_to_name || 'Unassigned'}
+                          </dd>
+                        </div>
 
-              {/* Subtasks */}
-              {task.subtasks && task.subtasks.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-[#1A936F]" />
-                    Subtasks
-                  </h3>
-                  <div className="space-y-2">
-                    {task.subtasks.map((subtask, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                      >
-                        <CheckCircle2
-                          className={`w-5 h-5 ${
-                            subtask.status === 'completed'
-                              ? 'text-green-500'
-                              : 'text-gray-300'
-                          }`}
-                        />
-                        <span
-                          className={
-                            subtask.status === 'completed'
-                              ? 'line-through text-gray-500'
-                              : 'text-gray-700'
-                          }
-                        >
-                          {subtask.title}
-                        </span>
-                      </div>
-                    ))}
+                        {/* Created By */}
+                        <div className="flex flex-col">
+                          <dt className="text-xs font-medium text-gray-500 mb-1">Created By</dt>
+                          <dd className="text-sm text-gray-700 flex items-center gap-1.5">
+                            <User className="w-4 h-4 text-accent" />
+                            {task.created_by_name || 'Unknown'}
+                          </dd>
+                        </div>
+
+                        {/* Assignment Date */}
+                        <div className="flex flex-col">
+                          <dt className="text-xs font-medium text-gray-500 mb-1">Assignment Date</dt>
+                          <dd className="text-sm text-gray-700 flex items-center gap-1.5">
+                            <Calendar className="w-4 h-4 text-accent" />
+                            {format(new Date(task.assignment_date), 'MMM dd, yyyy')}
+                          </dd>
+                        </div>
+
+                        {/* Due Date */}
+                        {task.due_date && (
+                          <div className="flex flex-col">
+                            <dt className="text-xs font-medium text-gray-500 mb-1">Due Date</dt>
+                            <dd className="text-sm text-gray-700 flex items-center gap-1.5">
+                              <Calendar className="w-4 h-4 text-accent" />
+                              {format(new Date(task.due_date), 'MMM dd, yyyy')}
+                            </dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
                   </div>
+                  
+                  {/* Notes Section */}
+                  {task.notes && (
+                    <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-gray-100">
+                        <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-accent" />
+                          Notes
+                        </h3>
+                      </div>
+                      <div className="p-4 bg-gray-50">
+                        <p className="text-gray-700 whitespace-pre-wrap">{task.notes}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* Right column - Subtasks */}
+                <div className="space-y-6">
+                  {/* Subtasks Card */}
+                  <div className="bg-white rounded-lg border border-gray-100 shadow-sm">
+                    <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-accent" />
+                        Subtasks
+                      </h3>
+                      {task.subtasks && task.subtasks.length > 0 && (
+                        <span className="text-xs bg-gray-100 text-gray-700 py-1 px-2 rounded-full">
+                          {task.subtasks.filter(s => s.status === 'completed').length}/{task.subtasks.length} completed
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="p-4">
+                      {task.subtasks && task.subtasks.length > 0 ? (
+                        <ul className="space-y-2">
+                          {task.subtasks.map((subtask, index) => (
+                            <li
+                              key={index}
+                              className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 transition-colors"
+                            >
+                              <div className={`p-0.5 rounded-full ${subtask.status === 'completed' ? 'bg-green-500' : 'bg-gray-200'}`}>
+                                <CheckCircle2
+                                  className={`w-4 h-4 ${subtask.status === 'completed' ? 'text-white' : 'text-gray-400'}`}
+                                />
+                              </div>
+                              <span
+                                className={
+                                  subtask.status === 'completed'
+                                    ? 'line-through text-gray-500'
+                                    : 'text-gray-700'
+                                }
+                              >
+                                {subtask.title}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-500 text-center italic py-2">No subtasks</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Tags Card */}
+                  {task.tags && task.tags.length > 0 && (
+                    <div className="bg-white rounded-lg border border-gray-100 shadow-sm">
+                      <div className="p-4 border-b border-gray-100">
+                        <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                          <Tag className="w-4 h-4 text-accent" />
+                          Tags
+                        </h3>
+                      </div>
+                      <div className="p-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {task.tags.map((tag) => (
+                            <span key={tag.id} className="badge bg-gray-100 text-gray-700 border border-gray-200">
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           ) : (
             // History Timeline
-            <div className="space-y-4">
+            <div>
               {history.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No history available</p>
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <HistoryIcon className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500">No history available for this task</p>
+                </div>
               ) : (
                 <div className="relative">
                   {/* Timeline Line */}
@@ -297,17 +374,17 @@ const TaskView = () => {
                     {history.map((item) => (
                       <div key={item.id} className="relative flex gap-4">
                         {/* Timeline Icon */}
-                        <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#002B5B] flex items-center justify-center text-white z-10">
+                        <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white z-10 shadow-md">
                           {getChangeTypeIcon(item.change_type)}
                         </div>
 
                         {/* Timeline Content */}
-                        <div className="flex-1 bg-gray-50 rounded-lg p-4 shadow-sm">
+                        <div className="flex-1 bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-200 transition-colors">
                           <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-semibold text-[#002B5B]">
+                            <h4 className="font-semibold text-primary">
                               {formatChangeType(item.change_type)}
                             </h4>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">
                               {format(new Date(item.created_at), 'MMM dd, yyyy HH:mm')}
                             </span>
                           </div>
@@ -315,24 +392,31 @@ const TaskView = () => {
                           <p className="text-gray-700 mb-2">{item.change_description}</p>
 
                           {item.changed_by_name && (
-                            <p className="text-sm text-gray-600">
-                              by <span className="font-medium">{item.changed_by_name}</span>
+                            <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                              <User className="w-3 h-3" />
+                              <span className="font-medium">{item.changed_by_name}</span>
                             </p>
                           )}
 
                           {/* Show old/new values if available */}
                           {item.old_value && item.new_value && (
-                            <div className="mt-3 pt-3 border-t border-gray-200 text-sm">
-                              <div className="flex gap-4">
-                                <div className="flex-1">
-                                  <p className="text-gray-500 text-xs mb-1">Previous</p>
-                                  <p className="text-gray-700 font-mono bg-white px-2 py-1 rounded">
+                            <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-gray-500 text-xs mb-1 flex items-center gap-1">
+                                    <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                                    Previous
+                                  </p>
+                                  <p className="text-gray-700 font-mono text-xs bg-gray-50 px-2 py-1.5 rounded border border-gray-100">
                                     {item.old_value}
                                   </p>
                                 </div>
-                                <div className="flex-1">
-                                  <p className="text-gray-500 text-xs mb-1">Updated</p>
-                                  <p className="text-gray-700 font-mono bg-white px-2 py-1 rounded">
+                                <div>
+                                  <p className="text-gray-500 text-xs mb-1 flex items-center gap-1">
+                                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                    Updated
+                                  </p>
+                                  <p className="text-gray-700 font-mono text-xs bg-gray-50 px-2 py-1.5 rounded border border-gray-100">
                                     {item.new_value}
                                   </p>
                                 </div>

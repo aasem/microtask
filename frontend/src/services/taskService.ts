@@ -1,5 +1,10 @@
 import api from './api';
 
+export interface Tag {
+  id: number;
+  name: string;
+}
+
 export interface Task {
   id: number;
   title: string;
@@ -13,7 +18,7 @@ export interface Task {
   assignment_date: string;
   due_date?: string;
   status: 'not_started' | 'in_progress' | 'completed' | 'blocked';
-  tags?: string;
+  tags?: Tag[];
   notes?: string;
   subtasks?: Subtask[];
 }
