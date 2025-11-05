@@ -459,9 +459,9 @@ const updateTask = async (req, res) => {
         req.user.id,
         'notes_updated',
         'notes',
-        null,
-        null,
-        'Notes updated'
+        task.notes || 'None',
+        notes || 'None',
+        `Notes changed from "${task.notes || 'None'}" to "${notes || 'None'}"`
       );
     }
 
