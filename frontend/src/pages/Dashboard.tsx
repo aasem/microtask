@@ -34,9 +34,17 @@ const Dashboard = () => {
     setIsModalOpen(true);
   };
 
-  const handleEditTask = (task: Task) => {
-    setSelectedTask(task);
-    setIsModalOpen(true);
+  const handleEditTask = async (task: Task) => {
+    try {
+      // Fetch full task details including subtasks
+      const { taskService } = await import('../services/taskService');
+      const fullTask = await taskService.getTaskById(task.id);
+      setSelectedTask(fullTask);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch task details:', error);
+      setToast({ message: 'Failed to load task details', type: 'error' });
+    }
   };
 
   const handleDeleteTask = async (taskId: number) => {

@@ -28,7 +28,7 @@ const getAllTasks = async (req, res) => {
 
     let query = `
       SELECT 
-        t.id, t.title, t.description, t.priority, t.assignment_date, 
+        t.id, t.title, t.description, t.priority, t.assigned_to, t.assignment_date, 
         t.due_date, t.status, t.tags, t.notes, t.created_by,
         u.name as assigned_to_name, u.email as assigned_to_email,
         c.name as created_by_name
@@ -289,20 +289,26 @@ const updateTask = async (req, res) => {
         `Task reassigned from ${oldAssignedName || 'Unassigned'} to ${newAssignedName || 'Unassigned'}`
       );
     }
-    if (due_date !== undefined && due_date !== task.due_date) {
-      updateFields.push('due_date = @due_date');
-      request.input('due_date', sql.Date, due_date);
-      // Log due date change
-      await logTaskHistory(
-        pool,
-        id,
-        req.user.id,
-        'due_date_change',
-        'due_date',
-        task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : 'None',
-        due_date ? new Date(due_date).toISOString().split('T')[0] : 'None',
-        `Due date changed from ${task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : 'None'} to ${due_date ? new Date(due_date).toISOString().split('T')[0] : 'None'}`
-      );
+    if (due_date !== undefined) {
+      // Normalize both dates to ISO format for comparison
+      const oldDate = task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : null;
+      const newDate = due_date ? new Date(due_date).toISOString().split('T')[0] : null;
+      
+      if (oldDate !== newDate) {
+        updateFields.push('due_date = @due_date');
+        request.input('due_date', sql.Date, due_date);
+        // Log due date change
+        await logTaskHistory(
+          pool,
+          id,
+          req.user.id,
+          'due_date_change',
+          'due_date',
+          oldDate || 'None',
+          newDate || 'None',
+          `Due date changed from ${oldDate || 'None'} to ${newDate || 'None'}`
+        );
+      }
     }
     if (status !== undefined && status !== task.status) {
       updateFields.push('status = @status');
