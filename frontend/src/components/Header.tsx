@@ -46,7 +46,7 @@ const Header = () => {
           {/* Right - User Info */}
           <div className="flex items-center gap-2">
             {/* Notification Bell - Visual Enhancement */}
-            <div className="relative">
+            {/* <div className="relative">
               <button
                 onClick={toggleNotifications}
                 className="p-2 rounded-full text-gray-500 hover:text-accent hover:bg-gray-100 transition-colors relative focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
@@ -68,7 +68,7 @@ const Header = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </div> */}
 
             {user?.role === "admin" && (
               <Link
