@@ -70,20 +70,43 @@ class SqliteRequest {
           recordset: rows,
         };
       } else if (isInsert && needsLastId) {
-        // Handle INSERT with SCOPE_IDENTITY() - extract just the INSERT statement
-        // Split by semicolon and take the first statement (the INSERT)
+        // Handle INSERT with SCOPE_IDENTITY() - may have a SELECT after INSERT
         const statements = processedQuery
           .split(";")
           .map((s) => s.trim())
           .filter((s) => s.length > 0);
         const insertQuery = statements[0];
 
+        // Execute the INSERT
         this.db.run(insertQuery, params);
         const id = this.db.exec("SELECT last_insert_rowid() as id")[0]
           ?.values[0]?.[0];
 
-        // Save database after each query
+        // Save database after insert
         saveDatabase();
+
+        // Check if there's a SELECT statement after INSERT
+        if (
+          statements.length > 1 &&
+          statements[1].toUpperCase().startsWith("SELECT")
+        ) {
+          // Execute the SELECT with the inserted ID
+          const selectQuery = statements[1].replace(
+            /last_insert_rowid\(\)/gi,
+            id.toString()
+          );
+          const stmt = this.db.prepare(selectQuery);
+          stmt.bind(params);
+          const rows = [];
+          while (stmt.step()) {
+            rows.push(stmt.getAsObject());
+          }
+          stmt.free();
+
+          return {
+            recordset: rows.length > 0 ? rows : [{ id }],
+          };
+        }
 
         return {
           recordset: [{ id }],

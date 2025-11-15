@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, RotateCcw } from "lucide-react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import TaskCard from "../components/TaskCard";
@@ -86,6 +86,14 @@ const Dashboard = () => {
     }
   };
 
+  const handleResetFilters = () => {
+    setFilters({
+      priority: [],
+      status: "",
+      dueDateRange: { start: "", end: "" },
+    });
+  };
+
   // Filter tasks
   const filteredTasks = tasks.filter((task) => {
     // Priority filter
@@ -116,6 +124,13 @@ const Dashboard = () => {
     return true;
   });
 
+  // Check if any filters are active
+  const hasActiveFilters =
+    filters.priority.length > 0 ||
+    filters.status !== "" ||
+    filters.dueDateRange.start ||
+    filters.dueDateRange.end;
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -133,10 +148,19 @@ const Dashboard = () => {
 
           {/* Task List */}
           <div className="flex-1 ml-3">
-            <div className="flex justify-end items-center mb-2">
+            <div className="flex justify-end items-center gap-2 mb-2">
               {/* <h2 className="text-2xl font-bold text-gray-900">
                 Tasks ({filteredTasks.length})
               </h2> */}
+              {hasActiveFilters && (
+                <button
+                  onClick={handleResetFilters}
+                  className="btn-secondary flex items-center space-x-2"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  <span>Reset Filters</span>
+                </button>
+              )}
               {user && canCreateTask(user.role) && (
                 <button
                   onClick={handleCreateTask}
@@ -163,14 +187,23 @@ const Dashboard = () => {
 
             {!loading && !error && filteredTasks.length === 0 && (
               <div className="text-center py-12 card flex flex-col align-center justify-center">
-                <p className="text-gray-600 text-center">No tasks found</p>
-                {user && canCreateTask(user.role) && (
-                  <button
-                    onClick={handleCreateTask}
-                    className="mt-4 btn-accent w-auto self-center"
-                  >
-                    Create Your First Task
-                  </button>
+                {hasActiveFilters ? (
+                  <p className="text-gray-600 text-center">
+                    No tasks match the applied filters. Try adjusting your
+                    filter criteria or reset filters to see all tasks.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-gray-600 text-center">No tasks found</p>
+                    {user && canCreateTask(user.role) && (
+                      <button
+                        onClick={handleCreateTask}
+                        className="mt-4 btn-accent w-auto self-center"
+                      >
+                        Create Your First Task
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}

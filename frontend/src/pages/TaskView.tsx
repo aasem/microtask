@@ -8,19 +8,32 @@ import {
   CheckCircle2, 
   Clock, 
   FileText,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Edit
 } from 'lucide-react';
 import { taskService, Task, TaskHistory } from '../services/taskService';
 import { format } from 'date-fns';
+import TaskModal from '../components/TaskModal';
+import Toast from '../components/Toast';
+import { useAuthStore } from '../store/authStore';
+import { useTaskStore } from '../store/taskStore';
+import { canEditTask } from '../utils/roleUtils';
 
 const TaskView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const { updateTask } = useTaskStore();
   const [task, setTask] = useState<Task | null>(null);
   const [history, setHistory] = useState<TaskHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+  } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -41,6 +54,25 @@ const TaskView = () => {
       setError(err.response?.data?.error || 'Failed to fetch task data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditTask = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleSaveTask = async (taskData: Partial<Task>) => {
+    if (!task) return;
+    
+    try {
+      await updateTask(task.id, taskData);
+      setToast({ message: 'Task updated successfully', type: 'success' });
+      setIsModalOpen(false);
+      // Refresh task data after update
+      await fetchTaskData();
+    } catch (err) {
+      setToast({ message: 'Failed to update task', type: 'error' });
+      throw err;
     }
   };
 
@@ -124,7 +156,15 @@ const TaskView = () => {
         </button>
         
         <div className="flex items-center gap-2">
-          {/* Could add action buttons here like edit, share, etc */}
+          {user && task && canEditTask(user.role, task.assigned_to || 0, user.id) && (
+            <button
+              onClick={handleEditTask}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <Edit className="w-5 h-5" />
+              <span>Edit Task</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -433,6 +473,25 @@ const TaskView = () => {
           )}
         </div>
       </div>
+
+      {/* Task Modal */}
+      {task && (
+        <TaskModal
+          task={task}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleSaveTask}
+        />
+      )}
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
