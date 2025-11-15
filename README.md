@@ -81,7 +81,8 @@ A comprehensive, role-based task management web application built with React, Ex
 2. **Create `.env` file** in `backend` directory with:
 
    ```env
-   PORT=5000
+   PORT=3003
+   NODE_ENV=development
    JWT_SECRET=your_secure_random_secret_key_here
    JWT_EXPIRES_IN=24h
    ```
@@ -98,7 +99,7 @@ A comprehensive, role-based task management web application built with React, Ex
    npm run dev
    ```
 
-   This will run both the backend server (on `http://localhost:5000`) and frontend dev server (on `http://localhost:3000`) simultaneously.
+   This will run both the backend server (on `http://localhost:3003`) and frontend dev server (on `http://localhost:3000`) simultaneously.
 
 5. **Open your browser** and navigate to `http://localhost:3000`
 
@@ -128,14 +129,17 @@ npm install
 Create a `.env` file in the `backend` directory:
 
 ```env
-PORT=5000
+# Server Configuration
+PORT=3003
 NODE_ENV=development
 
-# Optional: Custom database path (defaults to database/taskmanagement.db)
-# DB_PATH=./database/taskmanagement.db
-
+# JWT Configuration
 JWT_SECRET=your_secure_random_secret_key_here
 JWT_EXPIRES_IN=24h
+
+# Database Configuration (SQLite)
+# Optional: Custom database path (defaults to database/taskmanagement.db)
+# DB_PATH=./database/taskmanagement.db
 ```
 
 **Note:** The database schema is automatically created on first run. The database file will be created at `database/taskmanagement.db` (or the path specified in `DB_PATH`).
@@ -162,7 +166,7 @@ npm run seed
 npm run dev
 ```
 
-The backend will run on `http://localhost:5000`
+The backend will run on `http://localhost:3003`
 
 ### 3. Frontend Setup
 
@@ -345,15 +349,15 @@ cd frontend && npm run build && npm run preview
 The frontend uses environment variables to configure the API base URL. This is essential when deploying to a different environment (like GCP).
 
 #### For Local Development
-When running locally with `npm run dev`, the frontend uses a relative path `/api/v1` which is proxied by Vite to `http://localhost:5000`.
+When running locally with `npm run dev`, the frontend uses a relative path `/api/v1` which is proxied by Vite to `http://localhost:3003`.
 
 #### For Deployment (GCP, Production, etc.)
 
 1. **Create a `.env` file** in the `frontend` directory:
 
    ```env
-   # For local backend at port 5000
-   VITE_API_BASE_URL=http://localhost:5000/api/v1
+   # For local backend at port 3003
+   VITE_API_BASE_URL=http://localhost:3003/api/v1
    
    # Or for a deployed backend (e.g., GCP Cloud Run)
    # VITE_API_BASE_URL=https://your-backend-service.run.app/api/v1
@@ -374,13 +378,14 @@ When running locally with `npm run dev`, the frontend uses a relative path `/api
 - Once built, the environment variables are embedded in the JavaScript bundle
 - For CORS to work, ensure your backend allows requests from your frontend's origin
 
-#### Example: Deploying to GCP with Backend on Public IP:3002
+#### Example: Deploying to GCP with Backend on Public IP:3003
 
-If your frontend will be served on GCP at port 3001 and your backend runs on GCP at a public IP on port 3002:
+If your frontend will be served on GCP at port 3001 and your backend runs on GCP at a public IP on port 3003:
 
 1. **Backend configuration** (`backend/.env`):
    ```env
-   PORT=3002
+   PORT=3003
+   NODE_ENV=production
    JWT_SECRET=your_secure_random_secret_key_here
    JWT_EXPIRES_IN=24h
    ```
@@ -388,10 +393,10 @@ If your frontend will be served on GCP at port 3001 and your backend runs on GCP
 2. **Frontend configuration** (`frontend/.env`):
    ```env
    # Replace YOUR_PUBLIC_IP with your actual GCP instance's public IP
-   VITE_API_BASE_URL=http://YOUR_PUBLIC_IP:3002/api/v1
+   VITE_API_BASE_URL=http://YOUR_PUBLIC_IP:3003/api/v1
    
    # Example:
-   # VITE_API_BASE_URL=http://34.123.45.67:3002/api/v1
+   # VITE_API_BASE_URL=http://34.123.45.67:3003/api/v1
    ```
 
 3. **Build and deploy:**
@@ -404,30 +409,30 @@ If your frontend will be served on GCP at port 3001 and your backend runs on GCP
    ```
 
 **Important for GCP Deployment:**
-- Ensure your GCP firewall rules allow inbound traffic on ports 3001 (frontend) and 3002 (backend)
+- Ensure your GCP firewall rules allow inbound traffic on ports 3001 (frontend) and 3003 (backend)
 - The backend server listens on all interfaces (0.0.0.0), so it will accept connections from the public IP
 - For HTTPS, you'll want to configure a reverse proxy (like nginx) or use a load balancer
 
 #### Quick GCP Deployment Checklist
 
 1. ✅ **Backend Setup:**
-   - Set `PORT=3002` in `backend/.env`
+   - Set `PORT=3003` in `backend/.env`
    - Ensure database is accessible on the GCP instance
    - Run backend: `cd backend && npm start` or `npm run dev`
-   - Backend will be accessible at `http://YOUR_PUBLIC_IP:3002`
+   - Backend will be accessible at `http://YOUR_PUBLIC_IP:3003`
 
 2. ✅ **Frontend Setup:**
-   - Create `frontend/.env` with: `VITE_API_BASE_URL=http://YOUR_PUBLIC_IP:3002/api/v1`
+   - Create `frontend/.env` with: `VITE_API_BASE_URL=http://YOUR_PUBLIC_IP:3003/api/v1`
    - Build frontend: `cd frontend && npm run build`
    - Deploy `frontend/dist/` to your hosting service (e.g., serve on port 3001)
 
 3. ✅ **GCP Firewall:**
    - Allow inbound TCP traffic on port 3001 (frontend)
-   - Allow inbound TCP traffic on port 3002 (backend)
+   - Allow inbound TCP traffic on port 3003 (backend)
 
 4. ✅ **Test:**
    - Access frontend: `http://YOUR_PUBLIC_IP:3001`
-   - Frontend should connect to backend at `http://YOUR_PUBLIC_IP:3002/api/v1`
+   - Frontend should connect to backend at `http://YOUR_PUBLIC_IP:3003/api/v1`
 
 ## 🐛 Troubleshooting
 
@@ -445,7 +450,7 @@ If your frontend will be served on GCP at port 3001 and your backend runs on GCP
 
 ### Frontend Not Connecting to Backend
 
-- Ensure backend is running on port 5000
+- Ensure backend is running on port 3003
 - Check CORS configuration in `backend/src/server.js`
 - Verify proxy settings in `frontend/vite.config.ts`
 
