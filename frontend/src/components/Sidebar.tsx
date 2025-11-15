@@ -1,5 +1,14 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, Filter, Calendar, AlertCircle, Tag, CheckCircle2, Clock } from 'lucide-react';
+import { useState } from "react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  Calendar,
+  AlertCircle,
+  Tag,
+  CheckCircle2,
+  Clock,
+} from "lucide-react";
 
 interface SidebarProps {
   filters: {
@@ -12,55 +21,72 @@ interface SidebarProps {
 
 const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
   const [isOpen, setIsOpen] = useState(true);
-  const hasActiveFilters = filters.priority.length > 0 || filters.status !== '' || filters.dueDateRange.start || filters.dueDateRange.end;
+  const hasActiveFilters =
+    filters.priority.length > 0 ||
+    filters.status !== "" ||
+    filters.dueDateRange.start ||
+    filters.dueDateRange.end;
 
   const handlePriorityChange = (priority: string) => {
     const newPriorities = filters.priority.includes(priority)
-      ? filters.priority.filter(p => p !== priority)
+      ? filters.priority.filter((p) => p !== priority)
       : [...filters.priority, priority];
     onFilterChange({ ...filters, priority: newPriorities });
   };
 
   const handleStatusChange = (status: string) => {
-    onFilterChange({ ...filters, status: filters.status === status ? '' : status });
-  };
-
-  const handleDateChange = (field: 'start' | 'end', value: string) => {
     onFilterChange({
       ...filters,
-      dueDateRange: { ...filters.dueDateRange, [field]: value }
+      status: filters.status === status ? "" : status,
+    });
+  };
+
+  const handleDateChange = (field: "start" | "end", value: string) => {
+    onFilterChange({
+      ...filters,
+      dueDateRange: { ...filters.dueDateRange, [field]: value },
     });
   };
 
   const clearFilters = () => {
     onFilterChange({
       priority: [],
-      status: '',
-      dueDateRange: { start: '', end: '' }
+      status: "",
+      dueDateRange: { start: "", end: "" },
     });
   };
-  
+
   const getPriorityColor = (priority: string) => {
-    switch(priority) {
-      case 'high': return 'text-red-600 border-red-200 bg-red-50';
-      case 'medium': return 'text-yellow-600 border-yellow-200 bg-yellow-50';
-      case 'low': return 'text-green-600 border-green-200 bg-green-50';
-      default: return 'text-gray-600 border-gray-200 bg-gray-50';
+    switch (priority) {
+      case "high":
+        return "text-red-600 border-red-200 bg-red-50";
+      case "medium":
+        return "text-yellow-600 border-yellow-200 bg-yellow-50";
+      case "low":
+        return "text-green-600 border-green-200 bg-green-50";
+      default:
+        return "text-gray-600 border-gray-200 bg-gray-50";
     }
   };
-  
+
   const getStatusIcon = (status: string) => {
-    switch(status) {
-      case 'completed': return <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />;
-      case 'in_progress': return <Clock className="w-3.5 h-3.5 text-blue-500" />;
-      case 'blocked': return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
-      default: return <Clock className="w-3.5 h-3.5 text-gray-500" />;
+    switch (status) {
+      case "completed":
+        return <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />;
+      case "in_progress":
+        return <Clock className="w-3.5 h-3.5 text-blue-500" />;
+      case "blocked":
+        return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
+      default:
+        return <Clock className="w-3.5 h-3.5 text-gray-500" />;
     }
   };
 
   return (
-    <div 
-      className={`bg-white rounded-lg border border-gray-100 shadow-sm transition-all duration-300 overflow-hidden ${isOpen ? 'w-72' : 'w-14'}`}
+    <div
+      className={`bg-[#fbf7f2] rounded-lg border border-gray-100 shadow-sm transition-all duration-300 overflow-hidden ${
+        isOpen ? "w-72" : "w-14"
+      }`}
     >
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         {isOpen ? (
@@ -71,9 +97,11 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
             <h3 className="font-semibold text-gray-900">Filters</h3>
             {hasActiveFilters && (
               <span className="bg-accent text-white text-xs px-1.5 py-0.5 rounded-full ml-1">
-                {(filters.priority.length > 0 ? 1 : 0) + 
-                 (filters.status ? 1 : 0) + 
-                 ((filters.dueDateRange.start || filters.dueDateRange.end) ? 1 : 0)}
+                {(filters.priority.length > 0 ? 1 : 0) +
+                  (filters.status ? 1 : 0) +
+                  (filters.dueDateRange.start || filters.dueDateRange.end
+                    ? 1
+                    : 0)}
               </span>
             )}
           </div>
@@ -89,7 +117,11 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
           className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
           aria-label={isOpen ? "Collapse filters" : "Expand filters"}
         >
-          {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          {isOpen ? (
+            <ChevronUp className="w-4 h-4" />
+          ) : (
+            <ChevronDown className="w-4 h-4" />
+          )}
         </button>
       </div>
 
@@ -102,13 +134,25 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
               Priority
             </label>
             <div className="flex flex-wrap gap-2">
-              {['high', 'medium', 'low'].map((priority) => (
+              {["high", "medium", "low"].map((priority) => (
                 <button
                   key={priority}
                   onClick={() => handlePriorityChange(priority)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex items-center gap-1 ${filters.priority.includes(priority) ? getPriorityColor(priority) : 'border-gray-200 hover:border-gray-300 text-gray-600'}`}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex items-center gap-1 ${
+                    filters.priority.includes(priority)
+                      ? getPriorityColor(priority)
+                      : "border-gray-200 hover:border-gray-300 text-gray-600"
+                  }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${priority === 'high' ? 'bg-red-500' : priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`}></span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      priority === "high"
+                        ? "bg-red-500"
+                        : priority === "medium"
+                        ? "bg-yellow-500"
+                        : "bg-green-500"
+                    }`}
+                  ></span>
                   <span className="capitalize">{priority}</span>
                 </button>
               ))}
@@ -122,22 +166,28 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
               Status
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {['not_started', 'in_progress', 'completed', 'blocked'].map((status) => (
-                <button 
-                  key={status}
-                  onClick={() => handleStatusChange(status)}
-                  className={`px-2 py-1.5 rounded border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${filters.status === status ? 'bg-primary bg-opacity-5 border-primary text-primary' : 'border-gray-200 hover:border-gray-300 text-gray-600'}`}
-                >
-                  {getStatusIcon(status)}
-                  <span>
-                    {status === 'not_started' 
-                      ? 'Not Started' 
-                      : status === 'in_progress' 
-                        ? 'In Progress' 
+              {["not_started", "in_progress", "completed", "blocked"].map(
+                (status) => (
+                  <button
+                    key={status}
+                    onClick={() => handleStatusChange(status)}
+                    className={`px-2 py-1.5 rounded border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                      filters.status === status
+                        ? "bg-primary bg-opacity-5 border-primary text-primary"
+                        : "border-gray-200 hover:border-gray-300 text-gray-600"
+                    }`}
+                  >
+                    {getStatusIcon(status)}
+                    <span>
+                      {status === "not_started"
+                        ? "Not Started"
+                        : status === "in_progress"
+                        ? "In Progress"
                         : status.charAt(0).toUpperCase() + status.slice(1)}
-                  </span>
-                </button>
-              ))}
+                    </span>
+                  </button>
+                )
+              )}
             </div>
           </div>
 
@@ -153,7 +203,7 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
                 <input
                   type="date"
                   value={filters.dueDateRange.start}
-                  onChange={(e) => handleDateChange('start', e.target.value)}
+                  onChange={(e) => handleDateChange("start", e.target.value)}
                   className="w-full"
                 />
               </div>
@@ -162,7 +212,7 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
                 <input
                   type="date"
                   value={filters.dueDateRange.end}
-                  onChange={(e) => handleDateChange('end', e.target.value)}
+                  onChange={(e) => handleDateChange("end", e.target.value)}
                   className="w-full"
                 />
               </div>
@@ -178,14 +228,16 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
             >
               <span className="w-3 h-3 relative">
                 <span className="absolute inset-0 border-2 border-gray-400 rounded-full"></span>
-                <span className="absolute inset-0 flex items-center justify-center font-bold text-gray-400 text-[10px]">×</span>
+                <span className="absolute inset-0 flex items-center justify-center font-bold text-gray-400 text-[10px]">
+                  ×
+                </span>
               </span>
               Reset Filters
             </button>
           )}
         </div>
       )}
-      
+
       {/* Mini Indicators when collapsed */}
       {!isOpen && hasActiveFilters && (
         <div className="p-2">
@@ -203,6 +255,5 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
     </div>
   );
 };
-
 
 export default Sidebar;
