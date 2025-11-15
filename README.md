@@ -99,9 +99,9 @@ A comprehensive, role-based task management web application built with React, Ex
    npm run dev
    ```
 
-   This will run both the backend server (on `http://localhost:3003`) and frontend dev server (on `http://localhost:3000`) simultaneously.
+   This will run both the backend server (on `http://localhost:3003`) and frontend dev server (on `http://localhost:3002`) simultaneously.
 
-5. **Open your browser** and navigate to `http://localhost:3000`
+5. **Open your browser** and navigate to `http://localhost:3002`
 
 **Login credentials:**
 
@@ -191,7 +191,7 @@ Or start them separately:
 npm run dev
 ```
 
-The frontend will run on `http://localhost:3000`
+The frontend will run on `http://localhost:3002`
 
 ## 📁 Project Structure
 
@@ -380,7 +380,7 @@ When running locally with `npm run dev`, the frontend uses a relative path `/api
 
 #### Example: Deploying to GCP with Backend on Public IP:3003
 
-If your frontend will be served on GCP at port 3001 and your backend runs on GCP at a public IP on port 3003:
+If your frontend will be served on GCP at port 3002 and your backend runs on GCP at a public IP on port 3003:
 
 1. **Backend configuration** (`backend/.env`):
    ```env
@@ -409,7 +409,7 @@ If your frontend will be served on GCP at port 3001 and your backend runs on GCP
    ```
 
 **Important for GCP Deployment:**
-- Ensure your GCP firewall rules allow inbound traffic on ports 3001 (frontend) and 3003 (backend)
+- Ensure your GCP firewall rules allow inbound traffic on ports 3002 (frontend) and 3003 (backend)
 - The backend server listens on all interfaces (0.0.0.0), so it will accept connections from the public IP
 - For HTTPS, you'll want to configure a reverse proxy (like nginx) or use a load balancer
 
@@ -424,14 +424,14 @@ If your frontend will be served on GCP at port 3001 and your backend runs on GCP
 2. ✅ **Frontend Setup:**
    - Create `frontend/.env` with: `VITE_API_BASE_URL=http://YOUR_PUBLIC_IP:3003/api/v1`
    - Build frontend: `cd frontend && npm run build`
-   - Deploy `frontend/dist/` to your hosting service (e.g., serve on port 3001)
+   - Deploy `frontend/dist/` to your hosting service (e.g., serve on port 3002)
 
 3. ✅ **GCP Firewall:**
-   - Allow inbound TCP traffic on port 3001 (frontend)
+   - Allow inbound TCP traffic on port 3002 (frontend)
    - Allow inbound TCP traffic on port 3003 (backend)
 
 4. ✅ **Test:**
-   - Access frontend: `http://YOUR_PUBLIC_IP:3001`
+   - Access frontend: `http://YOUR_PUBLIC_IP:3002`
    - Frontend should connect to backend at `http://YOUR_PUBLIC_IP:3003/api/v1`
 
 ## 🐛 Troubleshooting
