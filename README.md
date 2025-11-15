@@ -1,6 +1,6 @@
 # Task Management System
 
-A comprehensive, role-based task management web application built with React, Express, and Microsoft SQL Server.
+A comprehensive, role-based task management web application built with React, Express, and SQLite3.
 
 ## 🎯 Features
 
@@ -48,7 +48,7 @@ A comprehensive, role-based task management web application built with React, Ex
 
 ### Backend
 - **Express.js** (Node.js)
-- **Microsoft SQL Server** for database
+- **SQLite3** (via sql.js) for database
 - **JWT** for authentication
 - **bcryptjs** for password hashing
 - **CORS** enabled
@@ -57,10 +57,51 @@ A comprehensive, role-based task management web application built with React, Ex
 
 - **Node.js** (v16 or higher)
 - **npm** or **yarn**
-- **Microsoft SQL Server** (2016 or higher)
-- **SQL Server Management Studio** (optional, for database management)
 
-## 🚀 Getting Started
+## 🚀 Quick Start
+
+1. **Install backend dependencies:**
+   ```bash
+   cd backend
+   npm install
+   ```
+
+2. **Create `.env` file** in `backend` directory with:
+   ```env
+   PORT=5000
+   JWT_SECRET=your_secure_random_secret_key_here
+   JWT_EXPIRES_IN=24h
+   ```
+
+3. **Seed the database:**
+   ```bash
+   npm run seed
+   ```
+
+4. **Start backend server:**
+   ```bash
+   npm run dev
+   ```
+
+5. **In a new terminal, install frontend dependencies:**
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+6. **Start frontend server:**
+   ```bash
+   npm run dev
+   ```
+
+7. **Open your browser** and navigate to `http://localhost:3000`
+
+**Login credentials:**
+- Admin: `admin@example.com` / `password123`
+- Manager: `manager@example.com` / `password123`
+- User: `user@example.com` / `password123`
+
+## 🚀 Getting Started (Detailed)
 
 ### 1. Clone the Repository
 
@@ -68,29 +109,7 @@ A comprehensive, role-based task management web application built with React, Ex
 cd TaskTodoApp
 ```
 
-### 2. Database Setup
-
-#### Create Database
-
-1. Open SQL Server Management Studio or use sqlcmd
-2. Run the schema creation script:
-
-```bash
-sqlcmd -S localhost -d master -i database/schema.sql
-```
-
-#### Seed Sample Data (Optional)
-
-```bash
-sqlcmd -S localhost -d TaskManagementDB -i database/seed.sql
-```
-
-**Default Users:**
-- Admin: `admin@company.com` / `password123`
-- Manager: `manager1@company.com` / `password123`
-- User: `john@company.com` / `password123`
-
-### 3. Backend Setup
+### 2. Backend Setup
 
 ```bash
 cd backend
@@ -101,26 +120,33 @@ npm install
 
 Create a `.env` file in the `backend` directory:
 
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your database credentials:
-
 ```env
 PORT=5000
 NODE_ENV=development
 
-DB_SERVER=localhost
-DB_NAME=TaskManagementDB
-DB_USER=your_username
-DB_PASSWORD=your_password
-DB_ENCRYPT=true
-DB_TRUST_SERVER_CERTIFICATE=true
+# Optional: Custom database path (defaults to database/taskmanagement.db)
+# DB_PATH=./database/taskmanagement.db
 
 JWT_SECRET=your_secure_random_secret_key_here
 JWT_EXPIRES_IN=24h
 ```
+
+**Note:** The database schema is automatically created on first run. The database file will be created at `database/taskmanagement.db` (or the path specified in `DB_PATH`).
+
+#### Seed Sample Data
+
+After installing dependencies, seed the database with sample users:
+
+```bash
+npm run seed
+```
+
+**Default Users:**
+- Admin: `admin@example.com` / `password123`
+- Manager: `manager@example.com` / `password123`
+- User: `user@example.com` / `password123`
+
+**Note:** The seed script will skip if users already exist. To re-seed, delete the database file (`database/taskmanagement.db`) and run the seed command again.
 
 #### Start Backend Server
 
@@ -130,7 +156,7 @@ npm run dev
 
 The backend will run on `http://localhost:5000`
 
-### 4. Frontend Setup
+### 3. Frontend Setup
 
 ```bash
 cd frontend
@@ -196,7 +222,8 @@ TaskTodoApp/
 │   └── package.json
 ├── database/
 │   ├── schema.sql
-│   └── seed.sql
+│   ├── seed.sql
+│   └── taskmanagement.db (created automatically)
 └── README.md
 ```
 
@@ -274,11 +301,15 @@ npm run preview
 
 ## 🐛 Troubleshooting
 
-### Database Connection Issues
-- Verify SQL Server is running
-- Check credentials in `.env` file
-- Ensure SQL Server is configured to allow TCP/IP connections
-- Check firewall settings
+### Database Issues
+- Ensure the `database` directory exists and is writable
+- If you encounter database errors, try deleting `database/taskmanagement.db` and restarting the server (schema will be recreated automatically)
+- Check that the `DB_PATH` environment variable (if set) points to a valid location
+
+### Seeding Issues
+- If seed fails, ensure the backend dependencies are installed (`npm install` in the `backend` directory)
+- The seed script will skip if users already exist - delete the database file to re-seed
+- Verify the database file is not locked by another process
 
 ### Frontend Not Connecting to Backend
 - Ensure backend is running on port 5000
@@ -286,7 +317,7 @@ npm run preview
 - Verify proxy settings in `frontend/vite.config.ts`
 
 ### Authentication Issues
-- Check JWT_SECRET in `.env`
+- Check JWT_SECRET in `.env` file
 - Clear browser localStorage and retry login
 - Verify token expiration settings
 
