@@ -67,7 +67,7 @@ const TagMultiSelect = ({
 
     // Check if tag already exists
     const existingTag = availableTags.find(
-      (t) => t.name.toLowerCase() === trimmedQuery.toLowerCase()
+      (t) => t.name && t.name.toLowerCase() === trimmedQuery.toLowerCase()
     );
 
     if (existingTag) {
@@ -101,6 +101,7 @@ const TagMultiSelect = ({
 
   const filteredTags = availableTags.filter(
     (tag) =>
+      tag.name &&
       tag.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
       !selectedTags.some((t) => t.id === tag.id)
   );
@@ -108,7 +109,7 @@ const TagMultiSelect = ({
   const showCreateOption =
     searchQuery.trim() &&
     !availableTags.some(
-      (t) => t.name.toLowerCase() === searchQuery.trim().toLowerCase()
+      (t) => t.name && t.name.toLowerCase() === searchQuery.trim().toLowerCase()
     );
 
   return (
@@ -127,7 +128,7 @@ const TagMultiSelect = ({
             className="inline-flex items-center gap-1 px-2 py-1 bg-accent bg-opacity-10 text-accent border border-accent border-opacity-30 rounded text-sm"
           >
             <TagIcon className="w-3 h-3" />
-            {tag.name}
+            {tag.name || 'Unnamed Tag'}
             <button
               type="button"
               onClick={(e) => {
@@ -206,7 +207,7 @@ const TagMultiSelect = ({
                   )}
                 </div>
                 <TagIcon className="w-3 h-3 text-gray-400" />
-                {tag.name}
+                {tag.name || 'Unnamed Tag'}
               </button>
             ))
           ) : !showCreateOption ? (

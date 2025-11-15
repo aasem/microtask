@@ -5,7 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "seed": "node seed.js"
   },
   "keywords": [
     "task",
@@ -21,8 +22,7 @@
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
     "jsonwebtoken": "^9.0.2",
-    "msnodesqlv8": "^5.1.1",
-    "mssql": "^10.0.1"
+    "sql.js": "^1.10.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

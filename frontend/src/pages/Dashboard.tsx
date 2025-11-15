@@ -162,12 +162,12 @@ const Dashboard = () => {
             )}
 
             {!loading && !error && filteredTasks.length === 0 && (
-              <div className="text-center py-12 card">
-                <p className="text-gray-600">No tasks found</p>
+              <div className="text-center py-12 card flex flex-col align-center justify-center">
+                <p className="text-gray-600 text-center">No tasks found</p>
                 {user && canCreateTask(user.role) && (
                   <button
                     onClick={handleCreateTask}
-                    className="mt-4 btn-accent"
+                    className="mt-4 btn-accent w-auto self-center"
                   >
                     Create Your First Task
                   </button>

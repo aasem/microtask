@@ -1,37 +1,397 @@
-const sql = require("mssql");
+const initSqlJs = require("sql.js");
+const path = require("path");
+const fs = require("fs");
 require("dotenv").config();
 
-const config = {
-  server: process.env.DB_SERVER || "localhost",
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  port: parseInt(process.env.DB_PORT) || undefined,
-  options: {
-    encrypt: process.env.DB_ENCRYPT === "true",
-    trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === "true",
-    enableArithAbort: true,
-    instanceName: process.env.DB_PORT ? undefined : (process.env.DB_INSTANCE || "SQLEXPRESS"),
-  },
-  pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000,
-  },
+// Get database path from environment or use default
+const dbPath =
+  process.env.DB_PATH ||
+  path.join(__dirname, "../../../database/taskmanagement.db");
+
+// Ensure database directory exists
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
+let db = null;
+let SQL = null;
+let isInitialized = false;
+
+// SQLite compatibility layer to mimic mssql interface
+class SqliteRequest {
+  constructor(database) {
+    this.db = database;
+    this.params = {};
+  }
+
+  input(name, type, value) {
+    this.params[name] = value;
+    return this;
+  }
+
+  async query(sqlQuery) {
+    // Convert @paramName to :paramName placeholders for sql.js
+    const params = {};
+    let processedQuery = sqlQuery.replace(/@(\w+)/g, (match, paramName) => {
+      params[`:${paramName}`] = this.params[paramName];
+      return `:${paramName}`;
+    });
+
+    // Handle SQL Server specific syntax
+    processedQuery = processedQuery
+      .replace(/SCOPE_IDENTITY\(\)/gi, "last_insert_rowid()")
+      .replace(/GETDATE\(\)/gi, "datetime('now')")
+      .replace(/CAST\(GETDATE\(\)\s+AS\s+DATE\)/gi, "date('now')")
+      .replace(/IDENTITY\(1,1\)/gi, "AUTOINCREMENT")
+      .replace(/INT\s+IDENTITY\(1,1\)/gi, "INTEGER PRIMARY KEY AUTOINCREMENT");
+
+    try {
+      // Check if it's a SELECT query
+      const trimmedQuery = processedQuery.trim().toUpperCase();
+      const isSelect = trimmedQuery.startsWith("SELECT");
+      const isInsert = trimmedQuery.startsWith("INSERT");
+      const needsLastId =
+        processedQuery.includes("SCOPE_IDENTITY()") ||
+        processedQuery.includes("last_insert_rowid()");
+
+      if (isSelect) {
+        const stmt = this.db.prepare(processedQuery);
+        stmt.bind(params);
+        const rows = [];
+        while (stmt.step()) {
+          rows.push(stmt.getAsObject());
+        }
+        stmt.free();
+
+        // Don't save database after SELECT queries (read-only)
+
+        return {
+          recordset: rows,
+        };
+      } else if (isInsert && needsLastId) {
+        // Handle INSERT with SCOPE_IDENTITY() - extract just the INSERT statement
+        // Split by semicolon and take the first statement (the INSERT)
+        const statements = processedQuery
+          .split(";")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        const insertQuery = statements[0];
+
+        this.db.run(insertQuery, params);
+        const id = this.db.exec("SELECT last_insert_rowid() as id")[0]
+          ?.values[0]?.[0];
+
+        // Save database after each query
+        saveDatabase();
+
+        return {
+          recordset: [{ id }],
+        };
+      } else {
+        // INSERT, UPDATE, DELETE
+        this.db.run(processedQuery, params);
+
+        // Save database after each query
+        saveDatabase();
+
+        return {
+          recordset: [],
+          rowsAffected: this.db.getRowsModified(),
+        };
+      }
+    } catch (error) {
+      console.error("Query error:", error);
+      console.error("Original query:", sqlQuery);
+      console.error("Processed query:", processedQuery);
+      throw error;
+    }
+  }
+}
+
+class SqlitePool {
+  constructor(database) {
+    this.db = database;
+  }
+
+  request() {
+    return new SqliteRequest(this.db);
+  }
+
+  close() {
+    // sql.js databases don't need explicit closing
+    // but we should save before closing
+    if (this.db) {
+      saveDatabase();
+    }
+  }
+}
+
+// SQL type constants for compatibility
+const sql = {
+  Int: "INT",
+  VarChar: "VARCHAR",
+  Text: "TEXT",
+  Date: "DATE",
 };
 
-console.log(config);
+// Save database to file
+function saveDatabase() {
+  if (db) {
+    try {
+      const data = db.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(dbPath, buffer);
+    } catch (error) {
+      console.error("Error saving database:", error);
+    }
+  }
+}
 
-let pool = null;
+// Initialize database schema
+function initializeSchema() {
+  if (isInitialized) return;
+
+  console.log("Initializing database schema...");
+
+  // Check if Users table exists (indicates schema is already initialized)
+  const tableCheck = db.exec(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name='Users'`
+  );
+
+  if (tableCheck.length > 0 && tableCheck[0].values.length > 0) {
+    console.log("Database schema already exists, checking for migrations...");
+    runMigrations();
+    isInitialized = true;
+    return;
+  }
+
+  // Create Users Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS Users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'manager', 'user')),
+      created_at DATETIME NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Create Tasks Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS Tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('high', 'medium', 'low')),
+      assigned_to INTEGER,
+      created_by INTEGER NOT NULL,
+      assignment_date DATE NOT NULL DEFAULT (date('now')),
+      due_date DATE,
+      status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed', 'blocked')),
+      tags TEXT,
+      notes TEXT,
+      FOREIGN KEY (assigned_to) REFERENCES Users(id) ON DELETE SET NULL,
+      FOREIGN KEY (created_by) REFERENCES Users(id) ON DELETE NO ACTION
+    )
+  `);
+
+  // Create Subtasks Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS Subtasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'completed')),
+      FOREIGN KEY (task_id) REFERENCES Tasks(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create TaskHistory Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS TaskHistory (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER NOT NULL,
+      changed_by INTEGER NOT NULL,
+      change_type TEXT NOT NULL CHECK (change_type IN ('status_change', 'assignment_change', 'tags_change', 'due_date_change', 'subtask_added', 'notes_updated', 'priority_change', 'task_created')),
+      field_name TEXT,
+      old_value TEXT,
+      new_value TEXT,
+      change_description TEXT,
+      created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (task_id) REFERENCES Tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (changed_by) REFERENCES Users(id) ON DELETE NO ACTION
+    )
+  `);
+
+  // Create Tags Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS Tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      created_at DATETIME NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Create TaskTags Junction Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS TaskTags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER NOT NULL,
+      tag_id INTEGER NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (task_id) REFERENCES Tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (tag_id) REFERENCES Tags(id) ON DELETE CASCADE,
+      UNIQUE(task_id, tag_id)
+    )
+  `);
+
+  // Create Indexes
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON Tasks(assigned_to)`
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_tasks_created_by ON Tasks(created_by)`
+  );
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON Tasks(status)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON Tasks(due_date)`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON Subtasks(task_id)`
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_taskhistory_task_id ON TaskHistory(task_id)`
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_taskhistory_changed_by ON TaskHistory(changed_by)`
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_taskhistory_created_at ON TaskHistory(created_at)`
+  );
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tags_name ON Tags(name)`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_tasktags_task_id ON TaskTags(task_id)`
+  );
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tasktags_tag_id ON TaskTags(tag_id)`);
+
+  console.log("✅ Database schema created successfully!");
+
+  // Run migrations
+  runMigrations();
+
+  // Save database after schema creation
+  saveDatabase();
+
+  isInitialized = true;
+}
+
+// Run migrations for existing data
+function runMigrations() {
+  try {
+    // Migration: Migrate existing tags from Tasks.tags column to new structure
+    // Check if Tasks table has a tags column
+    const tableInfo = db.exec(`PRAGMA table_info(Tasks)`);
+    const hasTagsColumn =
+      tableInfo.length > 0 &&
+      tableInfo[0].values.some((col) => col[1] === "tags");
+
+    if (hasTagsColumn) {
+      console.log("Running tags migration...");
+
+      const tasksResult = db.exec(
+        `SELECT id, tags FROM Tasks WHERE tags IS NOT NULL AND tags != ''`
+      );
+
+      if (tasksResult.length > 0 && tasksResult[0].values.length > 0) {
+        const tasks = tasksResult[0].values.map((row) => ({
+          id: row[0],
+          tags: row[1],
+        }));
+
+        for (const task of tasks) {
+          if (!task.tags) continue;
+
+          const tagNames = task.tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter((t) => t.length > 0);
+
+          for (const tagName of tagNames) {
+            // Insert tag if it doesn't exist
+            let tagResult = db.exec(
+              `SELECT id FROM Tags WHERE name = '${tagName.replace(
+                /'/g,
+                "''"
+              )}'`
+            );
+            let tagId;
+
+            if (tagResult.length === 0 || tagResult[0].values.length === 0) {
+              db.run(
+                `INSERT INTO Tags (name) VALUES ('${tagName.replace(
+                  /'/g,
+                  "''"
+                )}')`
+              );
+              tagResult = db.exec("SELECT last_insert_rowid() as id");
+              tagId = tagResult[0].values[0][0];
+            } else {
+              tagId = tagResult[0].values[0][0];
+            }
+
+            // Link tag to task if not already linked
+            const existingLink = db.exec(
+              `SELECT 1 FROM TaskTags WHERE task_id = ${task.id} AND tag_id = ${tagId}`
+            );
+
+            if (
+              existingLink.length === 0 ||
+              existingLink[0].values.length === 0
+            ) {
+              db.run(
+                `INSERT INTO TaskTags (task_id, tag_id) VALUES (${task.id}, ${tagId})`
+              );
+            }
+          }
+        }
+
+        console.log("✅ Tags migration completed!");
+      }
+    }
+  } catch (error) {
+    console.error("Migration error:", error);
+    // Don't throw - migrations are optional
+  }
+}
 
 async function getConnection() {
   try {
-    if (pool) {
-      return pool;
+    if (db) {
+      return new SqlitePool(db);
     }
-    pool = await sql.connect(config);
-    console.log("✅ Connected to SQL Server");
-    return pool;
+
+    // Initialize SQL.js
+    if (!SQL) {
+      SQL = await initSqlJs();
+    }
+
+    // Check if database file exists
+    if (fs.existsSync(dbPath)) {
+      const buffer = fs.readFileSync(dbPath);
+      db = new SQL.Database(buffer);
+    } else {
+      // Create new database
+      db = new SQL.Database();
+    }
+
+    // Enable foreign keys
+    db.run("PRAGMA foreign_keys = ON");
+
+    // Initialize schema on first connection
+    initializeSchema();
+
+    console.log("✅ Connected to SQLite database:", dbPath);
+    return new SqlitePool(db);
   } catch (error) {
     console.error("❌ Database connection failed:", error.message);
     throw error;
@@ -40,9 +400,11 @@ async function getConnection() {
 
 async function closeConnection() {
   try {
-    if (pool) {
-      await pool.close();
-      pool = null;
+    if (db) {
+      saveDatabase();
+      db.close();
+      db = null;
+      isInitialized = false;
       console.log("Database connection closed");
     }
   } catch (error) {
@@ -50,8 +412,30 @@ async function closeConnection() {
   }
 }
 
+async function reloadDatabase() {
+  try {
+    console.log("Reloading database from disk...");
+
+    // Close existing connection
+    if (db) {
+      db.close();
+      db = null;
+      isInitialized = false;
+    }
+
+    // Reconnect (will load fresh from disk)
+    await getConnection();
+
+    console.log("✅ Database reloaded successfully");
+  } catch (error) {
+    console.error("Error reloading database:", error);
+    throw error;
+  }
+}
+
 module.exports = {
   sql,
   getConnection,
   closeConnection,
+  reloadDatabase,
 };

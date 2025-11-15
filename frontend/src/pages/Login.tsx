@@ -75,7 +75,7 @@ const Login = () => {
             </label>
             <input
               id="email"
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -120,13 +120,13 @@ const Login = () => {
           </p>
           <div className="text-xs text-gray-600 space-y-1">
             <p>
-              <strong>Admin:</strong> admin@company.com / password123
+              <strong>Admin:</strong> admin@example.com / password123
             </p>
             <p>
-              <strong>Manager:</strong> manager1@company.com / password123
+              <strong>Manager:</strong> manager1@example.com / password123
             </p>
             <p>
-              <strong>User:</strong> john@company.com / password123
+              <strong>User:</strong> john@example.com / password123
             </p>
           </div>
         </div>
