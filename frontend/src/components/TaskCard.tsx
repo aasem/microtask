@@ -49,7 +49,7 @@ const TaskCard = ({
 
   return (
     <div
-      className={`card shadow-card hover:border-gray-300 cursor-pointer ${
+      className={`card custom-card shadow-card hover:border-gray-300 cursor-pointer bg-gradient-to-br from-white to-gray-50 ${
         isOverdue ? "border-l-4 border-l-danger pl-4" : "pl-5"
       }`}
       onClick={handleCardClick}

@@ -178,3 +178,8 @@
     @apply bg-danger bg-opacity-10 text-danger;
   }
 }
+
+.custom-card {
+  background: linear-gradient(145deg, #ffffff, #e6e6e6) !important;
+  box-shadow: 6px 6px 12px #d1d1d1, -6px -6px 12px #ffffff !important;
+}
