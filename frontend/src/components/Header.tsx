@@ -1,21 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { LogOut, User, Users, CheckSquare, Bell } from "lucide-react";
+import { LogOut, User, CheckSquare } from "lucide-react";
 import { getRoleBadgeColor } from "../utils/roleUtils";
-import { useState } from "react";
 
 const Header = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
-  };
-
-  const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
   };
 
   return (
@@ -34,10 +28,10 @@ const Header = () => {
               </div>
               <div className="ml-3 flex flex-col">
                 <span className="text-lg font-bold text-primary group-hover:text-accent transition-colors duration-200">
-                  TaskManager
+                  Task Management
                 </span>
                 <span className="text-xs text-gray-500 -mt-1">
-                  Organize your work
+                  A minimalistic task management application
                 </span>
               </div>
             </Link>
@@ -76,8 +70,8 @@ const Header = () => {
                 className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all"
                 aria-label="Manage users"
               >
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Users</span>
+                <User  className="w-4 h-4" />
+                <span className="hidden sm:inline">User Management</span>
               </Link>
             )}
 

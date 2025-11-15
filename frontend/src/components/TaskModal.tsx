@@ -242,7 +242,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                       <option value="">Unassigned</option>
                       {users.map((u) => (
                         <option key={u.id} value={u.id}>
-                          {u.name} ({u.email})
+                          {u.name}
                         </option>
                       ))}
                     </select>

@@ -53,8 +53,8 @@ const Login = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
             <LogIn className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Task Manager</h1>
-          <p className="text-gray-600 mt-2">Sign in to manage your tasks</p>
+          <h1 className="text-3xl font-bold text-gray-900">Task Management</h1>
+          <p className="text-gray-600 mt-2">A minimalistic task management application</p>
         </div>
 
         {/* Error Message */}
@@ -71,7 +71,7 @@ const Login = () => {
               htmlFor="email"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Email Address
+              Username
             </label>
             <input
               id="email"
@@ -80,8 +80,8 @@ const Login = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full"
-              placeholder="Enter your email"
-              autoComplete="email"
+              placeholder="Enter your username"
+              autoComplete="username"
             />
           </div>
 
@@ -120,13 +120,13 @@ const Login = () => {
           </p>
           <div className="text-xs text-gray-600 space-y-1">
             <p>
-              <strong>Admin:</strong> admin@example.com / password123
+              <strong>Admin:</strong> admin / password123
             </p>
             <p>
-              <strong>Manager:</strong> manager1@example.com / password123
+              <strong>Manager:</strong> manager / password123
             </p>
             <p>
-              <strong>User:</strong> john@example.com / password123
+              <strong>User:</strong> user / password123
             </p>
           </div>
         </div>

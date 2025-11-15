@@ -24,44 +24,44 @@ async function seed() {
     // Insert admin user
     await pool.request()
       .input('name', 'VARCHAR', 'Admin User')
-      .input('email', 'VARCHAR', 'admin@example.com')
+      .input('email', 'VARCHAR', 'admin')
       .input('password_hash', 'VARCHAR', passwordHash)
       .input('role', 'VARCHAR', 'admin')
       .query(`
         INSERT INTO Users (name, email, password_hash, role)
         VALUES (@name, @email, @password_hash, @role)
       `);
-    console.log('✅ Admin user created: admin@example.com / password123');
+    console.log('✅ Admin user created: admin / password123');
     
     // Insert manager user
     await pool.request()
       .input('name', 'VARCHAR', 'Manager User')
-      .input('email', 'VARCHAR', 'manager@example.com')
+      .input('email', 'VARCHAR', 'manager')
       .input('password_hash', 'VARCHAR', passwordHash)
       .input('role', 'VARCHAR', 'manager')
       .query(`
         INSERT INTO Users (name, email, password_hash, role)
         VALUES (@name, @email, @password_hash, @role)
       `);
-    console.log('✅ Manager user created: manager@example.com / password123');
+    console.log('✅ Manager user created: manager / password123');
     
     // Insert regular user
     await pool.request()
       .input('name', 'VARCHAR', 'Regular User')
-      .input('email', 'VARCHAR', 'user@example.com')
+      .input('email', 'VARCHAR', 'user')
       .input('password_hash', 'VARCHAR', passwordHash)
       .input('role', 'VARCHAR', 'user')
       .query(`
         INSERT INTO Users (name, email, password_hash, role)
         VALUES (@name, @email, @password_hash, @role)
       `);
-    console.log('✅ Regular user created: user@example.com / password123');
+    console.log('✅ Regular user created: user / password123');
     
     console.log('\n🎉 Database seeded successfully!');
     console.log('\nYou can now login with:');
-    console.log('  Admin:   admin@example.com / password123');
-    console.log('  Manager: manager@example.com / password123');
-    console.log('  User:    user@example.com / password123');
+    console.log('  Admin:   admin / password123');
+    console.log('  Manager: manager / password123');
+    console.log('  User:    user / password123');
     
     await closeConnection();
     process.exit(0);

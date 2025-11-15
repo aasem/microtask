@@ -1,0 +1,29 @@
+{
+  "name": "task-management-app",
+  "version": "1.0.0",
+  "description": "Task Management System - Full Stack Application",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "start": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run preview",
+    "build": "cd frontend && npm run build",
+    "seed": "cd backend && npm run seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "task-management",
+    "full-stack",
+    "react",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC"
+}
+

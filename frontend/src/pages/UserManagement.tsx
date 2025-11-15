@@ -112,7 +112,7 @@ const UserManagement = () => {
                       Name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
+                      Username
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Role
@@ -197,15 +197,15 @@ const UserManagement = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-danger">*</span>
+                  Username <span className="text-danger">*</span>
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                   className="w-full"
-                  placeholder="Enter email"
+                  placeholder="Enter username"
                 />
               </div>
 

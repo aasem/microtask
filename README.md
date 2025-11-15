@@ -65,11 +65,17 @@ A comprehensive, role-based task management web application built with React, Ex
 
 ## 🚀 Quick Start
 
-1. **Install backend dependencies:**
+1. **Install all dependencies** (root, backend, and frontend):
 
    ```bash
-   cd backend
+   npm run install:all
+   ```
+
+   Or install them separately:
+   ```bash
    npm install
+   cd backend && npm install && cd ..
+   cd frontend && npm install && cd ..
    ```
 
 2. **Create `.env` file** in `backend` directory with:
@@ -86,32 +92,21 @@ A comprehensive, role-based task management web application built with React, Ex
    npm run seed
    ```
 
-4. **Start backend server:**
+4. **Start both frontend and backend** with a single command:
 
    ```bash
    npm run dev
    ```
 
-5. **In a new terminal, install frontend dependencies:**
+   This will run both the backend server (on `http://localhost:5000`) and frontend dev server (on `http://localhost:3000`) simultaneously.
 
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-6. **Start frontend server:**
-
-   ```bash
-   npm run dev
-   ```
-
-7. **Open your browser** and navigate to `http://localhost:3000`
+5. **Open your browser** and navigate to `http://localhost:3000`
 
 **Login credentials:**
 
-- Admin: `admin@example.com` / `password123`
-- Manager: `manager@example.com` / `password123`
-- User: `user@example.com` / `password123`
+- Admin: `admin` / `password123`
+- Manager: `manager` / `password123`
+- User: `user` / `password123`
 
 ## 🚀 Getting Started (Detailed)
 
@@ -155,9 +150,9 @@ npm run seed
 
 **Default Users:**
 
-- Admin: `admin@example.com` / `password123`
-- Manager: `manager@example.com` / `password123`
-- User: `user@example.com` / `password123`
+- Admin: `admin` / `password123`
+- Manager: `manager` / `password123`
+- User: `user` / `password123`
 
 **Note:** The seed script will skip if users already exist. To re-seed, delete the database file (`database/taskmanagement.db`) and run the seed command again.
 
@@ -178,7 +173,17 @@ npm install
 
 #### Start Frontend Development Server
 
+You can either start both servers together (recommended):
+
 ```bash
+# From the root directory
+npm run dev
+```
+
+Or start them separately:
+
+```bash
+# From frontend directory
 npm run dev
 ```
 
@@ -303,22 +308,126 @@ TaskTodoApp/
 
 ## 📝 Development
 
+### Development Mode
+
+Start both frontend and backend in development mode:
+
+```bash
+# From root directory
+npm run dev
+```
+
 ### Build for Production
 
 #### Backend
 
 ```bash
-cd backend
-npm start
+# From root directory
+npm run start:backend
+# Or from backend directory
+cd backend && npm start
 ```
 
 #### Frontend
 
 ```bash
-cd frontend
+# From root directory
 npm run build
-npm run preview
+npm run start:frontend
+# Or from frontend directory
+cd frontend && npm run build && npm run preview
 ```
+
+## 🚀 Deployment
+
+### Frontend Configuration for Deployment
+
+The frontend uses environment variables to configure the API base URL. This is essential when deploying to a different environment (like GCP).
+
+#### For Local Development
+When running locally with `npm run dev`, the frontend uses a relative path `/api/v1` which is proxied by Vite to `http://localhost:5000`.
+
+#### For Deployment (GCP, Production, etc.)
+
+1. **Create a `.env` file** in the `frontend` directory:
+
+   ```env
+   # For local backend at port 5000
+   VITE_API_BASE_URL=http://localhost:5000/api/v1
+   
+   # Or for a deployed backend (e.g., GCP Cloud Run)
+   # VITE_API_BASE_URL=https://your-backend-service.run.app/api/v1
+   ```
+
+2. **Build the frontend** with the environment variable:
+
+   ```bash
+   cd frontend
+   npm run build
+   ```
+
+3. **Deploy the built files** from `frontend/dist/` to your hosting service (GCP, Vercel, etc.)
+
+**Important Notes:**
+- Environment variables must be prefixed with `VITE_` to be exposed to the client
+- The `.env` file must be created **before** building the frontend
+- Once built, the environment variables are embedded in the JavaScript bundle
+- For CORS to work, ensure your backend allows requests from your frontend's origin
+
+#### Example: Deploying to GCP with Backend on Public IP:3002
+
+If your frontend will be served on GCP at port 3001 and your backend runs on GCP at a public IP on port 3002:
+
+1. **Backend configuration** (`backend/.env`):
+   ```env
+   PORT=3002
+   JWT_SECRET=your_secure_random_secret_key_here
+   JWT_EXPIRES_IN=24h
+   ```
+
+2. **Frontend configuration** (`frontend/.env`):
+   ```env
+   # Replace YOUR_PUBLIC_IP with your actual GCP instance's public IP
+   VITE_API_BASE_URL=http://YOUR_PUBLIC_IP:3002/api/v1
+   
+   # Example:
+   # VITE_API_BASE_URL=http://34.123.45.67:3002/api/v1
+   ```
+
+3. **Build and deploy:**
+   ```bash
+   # Build frontend with the correct API URL
+   cd frontend
+   npm run build
+   
+   # Deploy the built files from frontend/dist/ to your hosting service
+   ```
+
+**Important for GCP Deployment:**
+- Ensure your GCP firewall rules allow inbound traffic on ports 3001 (frontend) and 3002 (backend)
+- The backend server listens on all interfaces (0.0.0.0), so it will accept connections from the public IP
+- For HTTPS, you'll want to configure a reverse proxy (like nginx) or use a load balancer
+
+#### Quick GCP Deployment Checklist
+
+1. ✅ **Backend Setup:**
+   - Set `PORT=3002` in `backend/.env`
+   - Ensure database is accessible on the GCP instance
+   - Run backend: `cd backend && npm start` or `npm run dev`
+   - Backend will be accessible at `http://YOUR_PUBLIC_IP:3002`
+
+2. ✅ **Frontend Setup:**
+   - Create `frontend/.env` with: `VITE_API_BASE_URL=http://YOUR_PUBLIC_IP:3002/api/v1`
+   - Build frontend: `cd frontend && npm run build`
+   - Deploy `frontend/dist/` to your hosting service (e.g., serve on port 3001)
+
+3. ✅ **GCP Firewall:**
+   - Allow inbound TCP traffic on port 3001 (frontend)
+   - Allow inbound TCP traffic on port 3002 (backend)
+
+4. ✅ **Test:**
+   - Access frontend: `http://YOUR_PUBLIC_IP:3001`
+   - Frontend should connect to backend at `http://YOUR_PUBLIC_IP:3002/api/v1`
 
 ## 🐛 Troubleshooting
 
