@@ -152,7 +152,7 @@
     @apply bg-green-500;
   }
 
-  .status-blocked {
+.status-suspended {
     @apply bg-red-500;
   }
 

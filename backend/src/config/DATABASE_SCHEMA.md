@@ -49,7 +49,7 @@ Main task records.
 | created_by           | INTEGER  | NOT NULL                       | User who created the task                               |
 | assignment_date      | DATE     | NOT NULL DEFAULT now           | Date task was assigned                                  |
 | due_date             | DATETIME | NULL                           | Task deadline                                           |
-| status               | TEXT     | NOT NULL DEFAULT 'not_started' | Status: not_started, in_progress, completed, or blocked |
+| status               | TEXT     | NOT NULL DEFAULT 'not_started' | Status: not_started, in_progress, completed, or suspended |
 | tags                 | TEXT     | NULL                           | Legacy tags column (kept for compatibility)             |
 | notes                | TEXT     | NULL                           | Additional task notes                                   |
 

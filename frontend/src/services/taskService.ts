@@ -19,7 +19,7 @@ export interface Task {
   created_by_name?: string;
   assignment_date: string;
   due_date?: string;
-  status: "not_started" | "in_progress" | "completed" | "blocked";
+  status: "not_started" | "in_progress" | "completed" | "suspended";
   tags?: Tag[];
   notes?: string;
   subtasks?: Subtask[];
@@ -49,7 +49,7 @@ export interface TaskSummary {
   completed: number;
   in_progress: number;
   not_started: number;
-  blocked: number;
+  suspended: number;
   overdue: number;
 }
 

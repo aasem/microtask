@@ -247,7 +247,7 @@ function initializeSchema() {
       created_by INTEGER NOT NULL,
       assignment_date DATE NOT NULL DEFAULT (date('now')),
       due_date DATETIME,
-      status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed', 'blocked')),
+      status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed', 'suspended')),
       tags TEXT,
       notes TEXT,
       FOREIGN KEY (assigned_to_div) REFERENCES Users(id) ON DELETE SET NULL,

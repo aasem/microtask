@@ -42,8 +42,8 @@ const TaskCard = ({
         return "status-completed";
       case "in_progress":
         return "status-in-progress";
-      case "blocked":
-        return "status-blocked";
+      case "suspended":
+        return "status-suspended";
       default:
         return "status-not-started";
     }

@@ -114,7 +114,7 @@ const TaskView = () => {
         return "bg-green-100 text-green-800 border-green-300";
       case "in_progress":
         return "bg-blue-100 text-blue-800 border-blue-300";
-      case "blocked":
+      case "suspended":
         return "bg-red-100 text-red-800 border-red-300";
       default:
         return "bg-gray-100 text-gray-800 border-gray-300";
@@ -198,7 +198,7 @@ const TaskView = () => {
               ? "bg-green-500"
               : task.status === "in_progress"
               ? "bg-blue-500"
-              : task.status === "blocked"
+              : task.status === "suspended"
               ? "bg-red-500"
               : "bg-gray-400"
           }`}
@@ -214,8 +214,8 @@ const TaskView = () => {
                     ? "status-completed"
                     : task.status === "in_progress"
                     ? "status-in-progress"
-                    : task.status === "blocked"
-                    ? "status-blocked"
+                    : task.status === "suspended"
+                    ? "status-suspended"
                     : "status-not-started"
                 }`}
               />

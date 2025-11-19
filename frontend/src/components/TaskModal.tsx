@@ -33,9 +33,12 @@ interface User {
   email: string;
 }
 
+type TaskStatus = "not_started" | "in_progress" | "completed" | "suspended";
+type TaskFormData = Omit<Partial<Task>, "status"> & { status?: TaskStatus };
+
 const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
   const { user } = useAuthStore();
-  const [formData, setFormData] = useState<Partial<Task>>({
+  const [formData, setFormData] = useState<TaskFormData>({
     title: "",
     description: "",
     priority: "medium",
@@ -56,7 +59,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
     name: "",
     user_id: undefined as number | undefined,
   });
-  const [taskFiles, setTaskFiles] = useState<FileAttachment[]>([]);
+  const [taskFiles, setTaskFiles] = useState<FileAttachment[]>(task?.files || []);
   const [subtaskFiles, setSubtaskFiles] = useState<{
     [subtaskIndex: number]: FileAttachment[];
   }>({});
@@ -593,7 +596,12 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                 <div className="form-group">
                   <label className="form-label">Status</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {["not_started", "in_progress", "completed", "blocked"].map(
+                    {[
+                      "not_started",
+                      "in_progress",
+                      "completed",
+                      "suspended",
+                    ].map(
                       (status) => (
                         <div
                           key={status}
@@ -604,7 +612,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                                 | "not_started"
                                 | "in_progress"
                                 | "completed"
-                                | "blocked",
+                                | "suspended",
                             })
                           }
                           className={`p-2 border rounded cursor-pointer flex items-center gap-2 transition-colors ${
@@ -619,8 +627,8 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                                 ? "status-completed"
                                 : status === "in_progress"
                                 ? "status-in-progress"
-                                : status === "blocked"
-                                ? "status-blocked"
+                              : status === "suspended"
+                              ? "status-suspended"
                                 : "status-not-started"
                             }`}
                           ></span>
@@ -830,9 +838,9 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
               <p className="text-sm text-gray-500 mb-2">Uploading...</p>
             )}
 
-            {taskFiles.length > 0 || (task?.files && task.files.length > 0) ? (
+            {taskFiles.length > 0 ? (
               <div className="space-y-2">
-                {(task?.files || []).concat(taskFiles).map((file) => (
+                {taskFiles.map((file) => (
                   <div
                     key={file.id}
                     className="flex items-center justify-between bg-white p-3 rounded border border-gray-200"

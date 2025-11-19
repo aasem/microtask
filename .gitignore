@@ -47,3 +47,5 @@ coverage/
 .cache
 
 *.db
+
+/uploads/

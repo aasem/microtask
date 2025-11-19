@@ -29,6 +29,16 @@ const logTaskHistory = async (
   }
 };
 
+const normalizeDateTimeInput = (value) => {
+  if (!value) return null;
+  const parsedDate = new Date(value);
+  if (isNaN(parsedDate.getTime())) {
+    return null;
+  }
+  const isoString = parsedDate.toISOString().replace("Z", "").replace("T", " ");
+  return isoString.split(".")[0];
+};
+
 const getAllTasks = async (req, res) => {
   try {
     const pool = await getConnection();
@@ -204,13 +214,7 @@ const createTask = async (req, res) => {
         sql.Date,
         new Date().toISOString().split("T")[0]
       )
-      .input(
-        "due_date",
-        sql.Text,
-        due_date
-          ? new Date(due_date).toISOString().replace("Z", "").replace("T", " ")
-          : null
-      )
+      .input("due_date", sql.Text, normalizeDateTimeInput(due_date))
       .input("status", sql.VarChar, status)
       .input("notes", sql.Text, notes || null).query(`
         INSERT INTO Tasks (title, description, priority, assigned_to_div, assigned_to_div_user, created_by, assignment_date, due_date, status, notes)
@@ -528,13 +532,11 @@ const updateTask = async (req, res) => {
         ? new Date(task.due_date).toISOString()
         : null;
       const newDateTime = due_date ? new Date(due_date).toISOString() : null;
+      const normalizedDueDate = normalizeDateTimeInput(due_date);
 
       if (oldDateTime !== newDateTime) {
         updateFields.push("due_date = @due_date");
-        const formattedDueDate = newDateTime
-          ? newDateTime.replace("Z", "").replace("T", " ")
-          : null;
-        request.input("due_date", sql.Text, formattedDueDate);
+        request.input("due_date", sql.Text, normalizedDueDate);
 
         // Format for logging
         const oldDateFormatted = oldDateTime
@@ -904,8 +906,16 @@ const getTaskSummary = async (req, res) => {
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
         SUM(CASE WHEN status = 'not_started' THEN 1 ELSE 0 END) as not_started,
-        SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END) as blocked,
-        SUM(CASE WHEN due_date < datetime('now') AND status != 'completed' THEN 1 ELSE 0 END) as overdue
+        SUM(CASE WHEN status = 'suspended' THEN 1 ELSE 0 END) as suspended,
+        SUM(
+          CASE 
+            WHEN due_date IS NOT NULL 
+              AND datetime(substr(due_date, 1, 19)) < datetime('now') 
+              AND status != 'completed' 
+            THEN 1 
+            ELSE 0 
+          END
+        ) as overdue
       FROM Tasks
       ${whereClause}
     `);

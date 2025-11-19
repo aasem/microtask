@@ -88,7 +88,7 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
         return <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />;
       case "in_progress":
         return <Clock className="w-3.5 h-3.5 text-blue-500" />;
-      case "blocked":
+      case "suspended":
         return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
       default:
         return <Clock className="w-3.5 h-3.5 text-gray-500" />;
@@ -180,7 +180,7 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
               Status
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {["not_started", "in_progress", "completed", "blocked"].map(
+              {["not_started", "in_progress", "completed", "suspended"].map(
                 (status) => (
                   <button
                     key={status}

@@ -53,7 +53,7 @@ export const getStatusColor = (status: string): string => {
       return 'bg-success text-white';
     case 'in_progress':
       return 'bg-blue-500 text-white';
-    case 'blocked':
+    case 'suspended':
       return 'bg-danger text-white';
     case 'not_started':
       return 'bg-gray-400 text-white';
