@@ -522,7 +522,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                 {canAssign && (
                   <>
                     <div className="form-group">
-                      <label className="form-label">Assign to (Division)</label>
+                      <label className="form-label">Assign to (Div)</label>
                       <select
                         name="assigned_to_div"
                         value={formData.assigned_to_div || ""}
@@ -532,7 +532,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                         <option value="">Unassigned</option>
                         {users.map((u) => (
                           <option key={u.id} value={u.id}>
-                            {u.name} ({u.email})
+                            {u.name}
                           </option>
                         ))}
                       </select>
@@ -561,7 +561,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                         <option value="">Unassigned</option>
                         {divUsers.map((du) => (
                           <option key={du.id} value={du.id}>
-                            {du.name} ({du.linked_user_name})
+                            {du.name}
                           </option>
                         ))}
                       </select>
