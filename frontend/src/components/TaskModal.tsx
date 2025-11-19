@@ -332,10 +332,11 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
       alert("Please select a user");
       return;
     }
+    const userId = newDivUserData.user_id; // TypeScript now knows this is a number
     try {
       await divUserService.createDivUser({
         name: newDivUserData.name,
-        user_id: newDivUserData.user_id,
+        user_id: userId,
       });
       alert("DivUser created successfully!");
       setIsDivUserModalOpen(false);
@@ -927,7 +928,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
             <div className="p-6 border-b">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-bold text-gray-900">
-                  Add New DivUser
+                  Add DDG/ADDG
                 </h3>
                 <button
                   onClick={() => {
@@ -966,7 +967,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
 
               <div className="form-group">
                 <label className="form-label">
-                  Linked User <span className="text-danger">*</span>
+                  Div <span className="text-danger">*</span>
                 </label>
                 <select
                   value={newDivUserData.user_id || ""}
@@ -981,7 +982,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                   required
                   className="w-full"
                 >
-                  <option value="">Select a user</option>
+                  <option value="">Select a Div</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.email})
@@ -1006,7 +1007,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                 </button>
                 <button type="submit" className="btn-primary">
                   <Plus className="w-4 h-4" />
-                  Create DivUser
+                  Create
                 </button>
               </div>
             </form>

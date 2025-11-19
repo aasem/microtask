@@ -47,7 +47,7 @@ const getDivUserById = async (req, res) => {
   }
 };
 
-// Create DivUser
+// Create DDG/ADDG
 const createDivUser = async (req, res) => {
   try {
     const { name, user_id } = req.body;
@@ -103,39 +103,39 @@ const createDivUser = async (req, res) => {
       divUserId,
     });
   } catch (error) {
-    console.error("Create DivUser error:", error);
-    res.status(500).json({ error: "Failed to create DivUser" });
+    console.error("Create DDG/ADDG error:", error);
+    res.status(500).json({ error: "Failed to create DDG/ADDG" });
   }
 };
 
-// Update DivUser
+// Update DDG/ADDG
 const updateDivUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, user_id } = req.body;
 
-    // Only admin and manager can update DivUsers
+    // Only admin and manager can update DDG/ADDG
     if (req.user.role === "user") {
       return res
         .status(403)
-        .json({ error: "Only admins and managers can update DivUsers" });
+        .json({ error: "Only admins and managers can update DDG/ADDG" });
     }
 
     const pool = await getConnection();
 
-    // Check if DivUser exists
+    // Check if DDG/ADDG exists
     const divUserCheck = await pool
       .request()
       .input("id", sql.Int, id)
       .query("SELECT id, user_id FROM DivUsers WHERE id = @id");
 
     if (divUserCheck.recordset.length === 0) {
-      return res.status(404).json({ error: "DivUser not found" });
+      return res.status(404).json({ error: "DDG/ADDG not found" });
     }
 
     const currentDivUser = divUserCheck.recordset[0];
 
-    // If user_id provided, verify it exists and isn't already used by another DivUser
+    // If user_id provided, verify it exists and isn't already used by another DDG/ADDG
     if (user_id && user_id !== currentDivUser.user_id) {
       const userCheck = await pool
         .request()
@@ -146,7 +146,7 @@ const updateDivUser = async (req, res) => {
         return res.status(400).json({ error: "Invalid user_id" });
       }
 
-      // Check if another DivUser already uses this user_id
+      // Check if another DDG/ADDG already uses this user_id
       const existingCheck = await pool
         .request()
         .input("userId", sql.Int, user_id)
@@ -158,7 +158,7 @@ const updateDivUser = async (req, res) => {
       if (existingCheck.recordset.length > 0) {
         return res
           .status(400)
-          .json({ error: "DivUser already exists for this user" });
+          .json({ error: "DDG/ADDG already exists for this user" });
       }
     }
 
@@ -183,14 +183,14 @@ const updateDivUser = async (req, res) => {
       `UPDATE DivUsers SET ${updateFields.join(", ")} WHERE id = @id`
     );
 
-    res.json({ message: "DivUser updated successfully" });
+    res.json({ message: "DDG/ADDG updated successfully" });
   } catch (error) {
-    console.error("Update DivUser error:", error);
-    res.status(500).json({ error: "Failed to update DivUser" });
+    console.error("Update DDG/ADDG error:", error);
+    res.status(500).json({ error: "Failed to update DDG/ADDG" });
   }
 };
 
-// Delete DivUser
+// Delete DDG/ADDG
 const deleteDivUser = async (req, res) => {
   try {
     const { id } = req.params;

@@ -83,7 +83,11 @@ const DivUserManagement = () => {
         await divUserService.updateDivUser(editingDivUser.id, formData);
         alert("DivUser updated successfully!");
       } else {
-        await divUserService.createDivUser(formData);
+        if (formData.user_id === undefined) {
+          alert("Please select a user for this DivUser.");
+          return;
+        }
+        await divUserService.createDivUser(formData as { name: string; user_id: number });
         alert("DivUser created successfully!");
       }
       handleCloseModal();
@@ -147,7 +151,7 @@ const DivUserManagement = () => {
                 Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Linked User
+                Div
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Created At
@@ -226,7 +230,7 @@ const DivUserManagement = () => {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6 border-b">
               <h3 className="text-xl font-bold text-gray-900">
-                {editingDivUser ? "Edit DivUser" : "Add New DivUser"}
+                {editingDivUser ? "Edit DDG" : "Add DDG"}
               </h3>
             </div>
 
@@ -249,7 +253,7 @@ const DivUserManagement = () => {
 
               <div className="form-group">
                 <label className="form-label">
-                  Linked User <span className="text-danger">*</span>
+                  Div <span className="text-danger">*</span>
                 </label>
                 <select
                   value={formData.user_id || ""}
@@ -264,7 +268,7 @@ const DivUserManagement = () => {
                   required
                   className="w-full"
                 >
-                  <option value="">Select a user</option>
+                  <option value="">Select a Div</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.email})
