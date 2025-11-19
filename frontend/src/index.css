@@ -183,3 +183,17 @@
   background: linear-gradient(359deg, #ffffff, #e6e6e6) !important;
   box-shadow: 6px 6px 12px #d1d1d1, -6px -6px 12px #ffffff !important;
 }
+
+/* Simple marquee animation for long task titles */
+@keyframes marquee-simple {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-simple {
+  animation: marquee-simple 4s linear infinite;
+}

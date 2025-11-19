@@ -56,8 +56,15 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log(email, password);
+    console.log(
+      "🔐 Login attempt - Email:",
+      email,
+      "| Password length:",
+      password?.length
+    );
+
     if (!email || !password) {
+      console.log("❌ Missing email or password");
       return res.status(400).json({ error: "Email and password are required" });
     }
 
@@ -71,26 +78,35 @@ const login = async (req, res) => {
         "SELECT id, name, email, password_hash, role FROM Users WHERE email = @email"
       );
 
+    console.log("📊 Query result - Found users:", result.recordset.length);
+
     if (result.recordset.length === 0) {
+      console.log("❌ User not found for email:", email);
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const user = result.recordset[0];
+    console.log("✅ User found:", user.email, "| Role:", user.role);
+    console.log("🔑 Password hash length:", user.password_hash?.length);
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    console.log("🔐 Password verification result:", isValidPassword);
 
     if (!isValidPassword) {
+      console.log("❌ Password verification failed");
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Generate JWT token
+    console.log("🎫 Generating JWT token...");
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
+    console.log("✅ Login successful for user:", user.email);
     res.json({
       token,
       user: {
@@ -101,7 +117,7 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("❌ Login error:", error);
     res.status(500).json({ error: "Login failed" });
   }
 };

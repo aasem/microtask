@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Users } from 'lucide-react';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
+import DivUserManagement from '../components/DivUserManagement';
 import api from '../services/api';
 import { getRoleBadgeColor } from '../utils/roleUtils';
 
@@ -13,7 +14,10 @@ interface User {
   created_at: string;
 }
 
+type TabType = 'users' | 'divusers';
+
 const UserManagement = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -89,81 +93,120 @@ const UserManagement = () => {
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <button onClick={handleCreate} className="btn-primary flex items-center space-x-2">
-            <Plus className="w-5 h-5" />
-            <span>Add User</span>
-          </button>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">User Management</h1>
+          
+          {/* Tabs */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'users'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Users className="w-5 h-5 inline mr-2" />
+                Login Users
+              </button>
+              <button
+                onClick={() => setActiveTab('divusers')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'divusers'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Users className="w-5 h-5 inline mr-2" />
+                DivUsers (Non-Login)
+              </button>
+            </nav>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="mt-2 text-gray-600">Loading users...</p>
-          </div>
-        ) : (
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Username
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created At
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-600">{user.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`badge ${getRoleBadgeColor(user.role)}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(user)}
-                          className="text-accent hover:text-accent-dark mr-3"
-                          title="Edit user"
-                        >
-                          <Edit className="w-4 h-4 inline" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="text-danger hover:text-red-700"
-                          title="Delete user"
-                        >
-                          <Trash2 className="w-4 h-4 inline" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Tab Content */}
+        {activeTab === 'users' ? (
+          <>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Login Users</h2>
+              <button onClick={handleCreate} className="btn-primary flex items-center space-x-2">
+                <Plus className="w-5 h-5" />
+                <span>Add User</span>
+              </button>
             </div>
-          </div>
+
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="mt-2 text-gray-600">Loading users...</p>
+              </div>
+            ) : (
+              <div className="card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Username
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Role
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Created At
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {users.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-600">{user.email}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`badge ${getRoleBadgeColor(user.role)}`}>
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {new Date(user.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button
+                              onClick={() => handleEdit(user)}
+                              className="text-accent hover:text-accent-dark mr-3"
+                              title="Edit user"
+                            >
+                              <Edit className="w-4 h-4 inline" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(user.id)}
+                              className="text-danger hover:text-red-700"
+                              title="Delete user"
+                            >
+                              <Trash2 className="w-4 h-4 inline" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <DivUserManagement />
         )}
       </div>
 

@@ -9,23 +9,27 @@ import {
   CheckCircle2,
   Clock,
 } from "lucide-react";
+import { Tag as TagType } from "../services/tagService";
 
 interface SidebarProps {
   filters: {
     priority: string[];
     status: string;
     dueDateRange: { start: string; end: string };
+    tags: TagType[];
   };
   onFilterChange: (filters: any) => void;
+  availableTags: TagType[];
 }
 
-const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
+const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const hasActiveFilters =
     filters.priority.length > 0 ||
     filters.status !== "" ||
     filters.dueDateRange.start ||
-    filters.dueDateRange.end;
+    filters.dueDateRange.end ||
+    filters.tags.length > 0;
 
   const handlePriorityChange = (priority: string) => {
     const newPriorities = filters.priority.includes(priority)
@@ -48,11 +52,20 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
     });
   };
 
+  const handleTagChange = (tag: TagType) => {
+    const isSelected = filters.tags.some((t) => t.id === tag.id);
+    const newTags = isSelected
+      ? filters.tags.filter((t) => t.id !== tag.id)
+      : [...filters.tags, tag];
+    onFilterChange({ ...filters, tags: newTags });
+  };
+
   const clearFilters = () => {
     onFilterChange({
       priority: [],
       status: "",
       dueDateRange: { start: "", end: "" },
+      tags: [],
     });
   };
 
@@ -101,7 +114,8 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
                   (filters.status ? 1 : 0) +
                   (filters.dueDateRange.start || filters.dueDateRange.end
                     ? 1
-                    : 0)}
+                    : 0) +
+                  (filters.tags.length > 0 ? 1 : 0)}
               </span>
             )}
           </div>
@@ -219,6 +233,53 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
             </div>
           </div>
 
+          {/* Tags Filter */}
+          {availableTags.length > 0 && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                <Tag className="w-3.5 h-3.5 text-accent" />
+                Tags
+              </label>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {availableTags.map((tag) => (
+                  <button
+                    key={tag.id}
+                    onClick={() => handleTagChange(tag)}
+                    className={`w-full px-3 py-2 rounded border text-xs font-medium flex items-center gap-2 transition-colors ${
+                      filters.tags.some((t) => t.id === tag.id)
+                        ? "bg-accent bg-opacity-10 border-accent text-accent"
+                        : "border-gray-200 hover:border-gray-300 text-gray-600"
+                    }`}
+                  >
+                    <div
+                      className={`w-3 h-3 border-2 rounded flex items-center justify-center ${
+                        filters.tags.some((t) => t.id === tag.id)
+                          ? "bg-accent border-accent"
+                          : "border-gray-300"
+                      }`}
+                    >
+                      {filters.tags.some((t) => t.id === tag.id) && (
+                        <svg
+                          className="w-2 h-2 text-white"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      )}
+                    </div>
+                    <Tag className="w-3 h-3 text-gray-400" />
+                    <span className="truncate">{tag.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Clear Filters */}
           {hasActiveFilters && (
             <button
@@ -248,7 +309,10 @@ const Sidebar = ({ filters, onFilterChange }: SidebarProps) => {
             <div className="h-2 w-2 bg-primary rounded-full mx-auto mb-2"></div>
           )}
           {(filters.dueDateRange.start || filters.dueDateRange.end) && (
-            <div className="h-2 w-2 bg-yellow-500 rounded-full mx-auto"></div>
+            <div className="h-2 w-2 bg-yellow-500 rounded-full mx-auto mb-2"></div>
+          )}
+          {filters.tags.length > 0 && (
+            <div className="h-2 w-2 bg-blue-500 rounded-full mx-auto"></div>
           )}
         </div>
       )}

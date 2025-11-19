@@ -37,18 +37,20 @@ const getAllTasks = async (req, res) => {
 
     let query = `
       SELECT 
-        t.id, t.title, t.description, t.priority, t.assigned_to, t.assignment_date, 
-        t.due_date, t.status, t.notes, t.created_by,
-        u.name as assigned_to_name, u.email as assigned_to_email,
+        t.id, t.title, t.description, t.priority, t.assigned_to_div, t.assigned_to_div_user, 
+        t.assignment_date, t.due_date, t.status, t.notes, t.created_by,
+        u.name as assigned_to_div_name, u.email as assigned_to_div_email,
+        du.name as assigned_to_div_user_name,
         c.name as created_by_name
       FROM Tasks t
-      LEFT JOIN Users u ON t.assigned_to = u.id
+      LEFT JOIN Users u ON t.assigned_to_div = u.id
+      LEFT JOIN DivUsers du ON t.assigned_to_div_user = du.id
       LEFT JOIN Users c ON t.created_by = c.id
     `;
 
     // Role-based filtering
     if (userRole === "user") {
-      query += ` WHERE t.assigned_to = @userId`;
+      query += ` WHERE t.assigned_to_div = @userId`;
     }
     // Admin and Manager see all tasks (or you can filter manager by team)
 
@@ -89,12 +91,13 @@ const getTaskById = async (req, res) => {
 
     const result = await pool.request().input("id", sql.Int, id).query(`
         SELECT 
-          t.id, t.title, t.description, t.priority, t.assigned_to, t.assignment_date, 
-          t.due_date, t.status, t.notes, t.created_by,
-          u.name as assigned_to_name, u.email as assigned_to_email,
-          c.name as created_by_name
+          t.id, t.title, t.description, t.priority, t.assigned_to_div, t.assigned_to_div_user,
+          t.assignment_date, t.due_date, t.status, t.notes, t.created_by,
+          u.name as assigned_to_div_name, u.email as assigned_to_div_email,
+          du.name as assigned_to_div_user_name, c.name as created_by_name
         FROM Tasks t
-        LEFT JOIN Users u ON t.assigned_to = u.id
+        LEFT JOIN Users u ON t.assigned_to_div = u.id
+        LEFT JOIN DivUsers du ON t.assigned_to_div_user = du.id
         LEFT JOIN Users c ON t.created_by = c.id
         WHERE t.id = @id
       `);
@@ -106,7 +109,7 @@ const getTaskById = async (req, res) => {
     const task = result.recordset[0];
 
     // Check permissions
-    if (req.user.role === "user" && task.assigned_to !== req.user.id) {
+    if (req.user.role === "user" && task.assigned_to_div !== req.user.id) {
       return res.status(403).json({ error: "Access denied" });
     }
 
@@ -128,6 +131,30 @@ const getTaskById = async (req, res) => {
 
     task.subtasks = subtasksResult.recordset;
 
+    // Fetch files for each subtask
+    for (let subtask of task.subtasks) {
+      const subtaskFilesResult = await pool
+        .request()
+        .input("subtaskId", sql.Int, subtask.id).query(`
+          SELECT id, filename, original_filename, file_size, mime_type, created_at
+          FROM Files 
+          WHERE subtask_id = @subtaskId
+          ORDER BY created_at DESC
+        `);
+      subtask.files = subtaskFilesResult.recordset;
+    }
+
+    // Fetch files
+    const filesResult = await pool.request().input("taskId", sql.Int, id)
+      .query(`
+        SELECT id, filename, original_filename, file_size, mime_type, created_at
+        FROM Files 
+        WHERE task_id = @taskId
+        ORDER BY created_at DESC
+      `);
+
+    task.files = filesResult.recordset;
+
     res.json({ task });
   } catch (error) {
     console.error("Get task by ID error:", error);
@@ -141,7 +168,8 @@ const createTask = async (req, res) => {
       title,
       description,
       priority = "medium",
-      assigned_to,
+      assigned_to_div,
+      assigned_to_div_user,
       due_date,
       status = "not_started",
       tag_ids = [],
@@ -168,7 +196,8 @@ const createTask = async (req, res) => {
       .input("title", sql.VarChar, title)
       .input("description", sql.Text, description || null)
       .input("priority", sql.VarChar, priority)
-      .input("assigned_to", sql.Int, assigned_to || null)
+      .input("assigned_to_div", sql.Int, assigned_to_div || null)
+      .input("assigned_to_div_user", sql.Int, assigned_to_div_user || null)
       .input("created_by", sql.Int, req.user.id)
       .input(
         "assignment_date",
@@ -177,13 +206,15 @@ const createTask = async (req, res) => {
       )
       .input(
         "due_date",
-        sql.Date,
-        due_date ? new Date(due_date).toISOString().split("T")[0] : null
+        sql.Text,
+        due_date
+          ? new Date(due_date).toISOString().replace("Z", "").replace("T", " ")
+          : null
       )
       .input("status", sql.VarChar, status)
       .input("notes", sql.Text, notes || null).query(`
-        INSERT INTO Tasks (title, description, priority, assigned_to, created_by, assignment_date, due_date, status, notes)
-        VALUES (@title, @description, @priority, @assigned_to, @created_by, @assignment_date, @due_date, @status, @notes);
+        INSERT INTO Tasks (title, description, priority, assigned_to_div, assigned_to_div_user, created_by, assignment_date, due_date, status, notes)
+        VALUES (@title, @description, @priority, @assigned_to_div, @assigned_to_div_user, @created_by, @assignment_date, @due_date, @status, @notes);
         SELECT SCOPE_IDENTITY() AS id;
       `);
 
@@ -262,9 +293,74 @@ const createTask = async (req, res) => {
       }
     }
 
+    // Fetch the complete task with subtasks and files
+    const createdTaskResult = await pool
+      .request()
+      .input("taskId", sql.Int, taskId).query(`
+      SELECT
+        t.*,
+        c.name as created_by_name, c.email as created_by_email,
+        ad.name as assigned_to_div_name, ad.email as assigned_to_div_email,
+        adu.name as assigned_to_div_user_name
+      FROM Tasks t
+      LEFT JOIN Users c ON t.created_by = c.id
+      LEFT JOIN Users ad ON t.assigned_to_div = ad.id
+      LEFT JOIN DivUsers adu ON t.assigned_to_div_user = adu.id
+      WHERE t.id = @taskId
+    `);
+
+    const createdTask = createdTaskResult.recordset[0];
+
+    // Fetch tags
+    const tagsResult = await pool.request().input("taskId", sql.Int, taskId)
+      .query(`
+      SELECT tg.id, tg.name
+      FROM Tags tg
+      INNER JOIN TaskTags tt ON tg.id = tt.tag_id
+      WHERE tt.task_id = @taskId
+      ORDER BY tg.name
+    `);
+    createdTask.tags = tagsResult.recordset;
+
+    // Fetch subtasks
+    const subtasksResult = await pool.request().input("taskId", sql.Int, taskId)
+      .query(`
+      SELECT s.id, s.task_id, s.title, s.status, s.created_at
+      FROM Subtasks s
+      WHERE s.task_id = @taskId
+      ORDER BY s.created_at
+    `);
+    createdTask.subtasks = subtasksResult.recordset;
+
+    // Fetch files for each subtask
+    for (let subtask of createdTask.subtasks) {
+      const subtaskFilesResult = await pool
+        .request()
+        .input("subtaskId", sql.Int, subtask.id).query(`
+          SELECT id, filename, original_filename, file_size, mime_type, created_at
+          FROM Files 
+          WHERE subtask_id = @subtaskId
+          ORDER BY created_at DESC
+        `);
+      subtask.files = subtaskFilesResult.recordset;
+    }
+
+    // Fetch files
+    const filesResult = await pool.request().input("taskId", sql.Int, taskId)
+      .query(`
+      SELECT
+        f.id, f.filename, f.original_filename, f.file_size, f.mime_type, f.created_at,
+        u.name as uploaded_by_name, u.email as uploaded_by_email
+      FROM Files f
+      LEFT JOIN Users u ON f.uploaded_by = u.id
+      WHERE f.task_id = @taskId
+      ORDER BY f.created_at DESC
+    `);
+    createdTask.files = filesResult.recordset;
+
     res.status(201).json({
       message: "Task created successfully",
-      taskId,
+      task: createdTask,
     });
   } catch (error) {
     console.error("Create task error:", error);
@@ -279,7 +375,8 @@ const updateTask = async (req, res) => {
       title,
       description,
       priority,
-      assigned_to,
+      assigned_to_div,
+      assigned_to_div_user,
       due_date,
       status,
       tag_ids,
@@ -302,33 +399,57 @@ const updateTask = async (req, res) => {
     const task = taskCheck.recordset[0];
 
     // Permission check
-    if (req.user.role === "user" && task.assigned_to !== req.user.id) {
+    if (req.user.role === "user" && task.assigned_to_div !== req.user.id) {
       return res
         .status(403)
         .json({ error: "You can only edit tasks assigned to you" });
     }
 
-    // Get assigned user names for history logging
-    let oldAssignedName = null;
-    let newAssignedName = null;
+    // Get assigned user/divUser names for history logging
+    let oldAssignedDivName = null;
+    let newAssignedDivName = null;
+    let oldAssignedDivUserName = null;
+    let newAssignedDivUserName = null;
+
     if (
-      assigned_to !== undefined &&
-      assigned_to !== task.assigned_to &&
+      assigned_to_div !== undefined &&
+      assigned_to_div !== task.assigned_to_div &&
       req.user.role !== "user"
     ) {
-      if (task.assigned_to) {
+      if (task.assigned_to_div) {
         const oldUser = await pool
           .request()
-          .input("userId", sql.Int, task.assigned_to)
+          .input("userId", sql.Int, task.assigned_to_div)
           .query("SELECT name FROM Users WHERE id = @userId");
-        oldAssignedName = oldUser.recordset[0]?.name;
+        oldAssignedDivName = oldUser.recordset[0]?.name;
       }
-      if (assigned_to) {
+      if (assigned_to_div) {
         const newUser = await pool
           .request()
-          .input("userId", sql.Int, assigned_to)
+          .input("userId", sql.Int, assigned_to_div)
           .query("SELECT name FROM Users WHERE id = @userId");
-        newAssignedName = newUser.recordset[0]?.name;
+        newAssignedDivName = newUser.recordset[0]?.name;
+      }
+    }
+
+    if (
+      assigned_to_div_user !== undefined &&
+      assigned_to_div_user !== task.assigned_to_div_user &&
+      req.user.role !== "user"
+    ) {
+      if (task.assigned_to_div_user) {
+        const oldDivUser = await pool
+          .request()
+          .input("divUserId", sql.Int, task.assigned_to_div_user)
+          .query("SELECT name FROM DivUsers WHERE id = @divUserId");
+        oldAssignedDivUserName = oldDivUser.recordset[0]?.name;
+      }
+      if (assigned_to_div_user) {
+        const newDivUser = await pool
+          .request()
+          .input("divUserId", sql.Int, assigned_to_div_user)
+          .query("SELECT name FROM DivUsers WHERE id = @divUserId");
+        newAssignedDivUserName = newDivUser.recordset[0]?.name;
       }
     }
 
@@ -360,38 +481,69 @@ const updateTask = async (req, res) => {
       );
     }
     if (
-      assigned_to !== undefined &&
-      assigned_to !== task.assigned_to &&
+      assigned_to_div !== undefined &&
+      assigned_to_div !== task.assigned_to_div &&
       req.user.role !== "user"
     ) {
-      updateFields.push("assigned_to = @assigned_to");
-      request.input("assigned_to", sql.Int, assigned_to);
+      updateFields.push("assigned_to_div = @assigned_to_div");
+      request.input("assigned_to_div", sql.Int, assigned_to_div);
       // Log assignment change
       await logTaskHistory(
         pool,
         id,
         req.user.id,
         "assignment_change",
-        "assigned_to",
-        oldAssignedName || "Unassigned",
-        newAssignedName || "Unassigned",
-        `Task reassigned from ${oldAssignedName || "Unassigned"} to ${
-          newAssignedName || "Unassigned"
-        }`
+        "assigned_to_div",
+        oldAssignedDivName || "Unassigned",
+        newAssignedDivName || "Unassigned",
+        `Task division reassigned from ${
+          oldAssignedDivName || "Unassigned"
+        } to ${newAssignedDivName || "Unassigned"}`
+      );
+    }
+    if (
+      assigned_to_div_user !== undefined &&
+      assigned_to_div_user !== task.assigned_to_div_user &&
+      req.user.role !== "user"
+    ) {
+      updateFields.push("assigned_to_div_user = @assigned_to_div_user");
+      request.input("assigned_to_div_user", sql.Int, assigned_to_div_user);
+      // Log div user assignment change
+      await logTaskHistory(
+        pool,
+        id,
+        req.user.id,
+        "assignment_change",
+        "assigned_to_div_user",
+        oldAssignedDivUserName || "Unassigned",
+        newAssignedDivUserName || "Unassigned",
+        `Task DivUser reassigned from ${
+          oldAssignedDivUserName || "Unassigned"
+        } to ${newAssignedDivUserName || "Unassigned"}`
       );
     }
     if (due_date !== undefined) {
-      // Normalize both dates to ISO format for comparison
-      const oldDate = task.due_date
-        ? new Date(task.due_date).toISOString().split("T")[0]
+      // Normalize both datetimes to ISO format for comparison
+      const oldDateTime = task.due_date
+        ? new Date(task.due_date).toISOString()
         : null;
-      const newDate = due_date
-        ? new Date(due_date).toISOString().split("T")[0]
-        : null;
+      const newDateTime = due_date ? new Date(due_date).toISOString() : null;
 
-      if (oldDate !== newDate) {
+      if (oldDateTime !== newDateTime) {
         updateFields.push("due_date = @due_date");
-        request.input("due_date", sql.Date, newDate);
+        const formattedDueDate = newDateTime
+          ? newDateTime.replace("Z", "").replace("T", " ")
+          : null;
+        request.input("due_date", sql.Text, formattedDueDate);
+
+        // Format for logging
+        const oldDateFormatted = oldDateTime
+          ? new Date(oldDateTime).toLocaleString()
+          : "None";
+        const newDateFormatted = newDateTime
+          ? new Date(newDateTime).toLocaleString()
+          : "None";
+
         // Log due date change
         await logTaskHistory(
           pool,
@@ -399,9 +551,9 @@ const updateTask = async (req, res) => {
           req.user.id,
           "due_date_change",
           "due_date",
-          oldDate || "None",
-          newDate || "None",
-          `Due date changed from ${oldDate || "None"} to ${newDate || "None"}`
+          oldDateFormatted,
+          newDateFormatted,
+          `Due date changed from ${oldDateFormatted} to ${newDateFormatted}`
         );
       }
     }
@@ -521,7 +673,7 @@ const updateTask = async (req, res) => {
 
     // Update subtasks if provided
     if (subtasks) {
-      // Get existing subtasks for comparison
+      // Get existing subtasks with their files for preservation
       const existingSubtasks = await pool
         .request()
         .input("taskId", sql.Int, id)
@@ -529,22 +681,60 @@ const updateTask = async (req, res) => {
 
       const existingTitles = existingSubtasks.recordset.map((st) => st.title);
 
-      // Delete existing subtasks
+      // Get files for existing subtasks to preserve them
+      const subtaskFilesMap = new Map();
+      for (const existingSubtask of existingSubtasks.recordset) {
+        const filesResult = await pool
+          .request()
+          .input("subtaskId", sql.Int, existingSubtask.id).query(`
+            SELECT id, filename, original_filename, file_path, file_size, mime_type, uploaded_by, created_at
+            FROM Files 
+            WHERE subtask_id = @subtaskId
+          `);
+        if (filesResult.recordset.length > 0) {
+          subtaskFilesMap.set(existingSubtask.title, filesResult.recordset);
+        }
+      }
+
+      // Delete existing subtasks (this will cascade delete files)
       await pool
         .request()
         .input("taskId", sql.Int, id)
         .query("DELETE FROM Subtasks WHERE task_id = @taskId");
 
-      // Insert new subtasks
+      // Insert new subtasks and restore files
       for (const subtask of subtasks) {
-        await pool
+        const insertResult = await pool
           .request()
           .input("task_id", sql.Int, id)
           .input("title", sql.VarChar, subtask.title)
           .input("status", sql.VarChar, subtask.status || "not_started").query(`
             INSERT INTO Subtasks (task_id, title, status)
-            VALUES (@task_id, @title, @status)
+            VALUES (@task_id, @title, @status);
+            SELECT last_insert_rowid() AS id;
           `);
+
+        const newSubtaskId = insertResult.recordset[0].id;
+
+        // Restore files for this subtask if they existed before
+        if (subtaskFilesMap.has(subtask.title)) {
+          const filesToRestore = subtaskFilesMap.get(subtask.title);
+          for (const file of filesToRestore) {
+            await pool
+              .request()
+              .input("filename", sql.VarChar, file.filename)
+              .input("original_filename", sql.VarChar, file.original_filename)
+              .input("file_path", sql.VarChar, file.file_path)
+              .input("file_size", sql.Int, file.file_size)
+              .input("mime_type", sql.VarChar, file.mime_type)
+              .input("subtask_id", sql.Int, newSubtaskId)
+              .input("uploaded_by", sql.Int, file.uploaded_by)
+              .input("created_at", sql.VarChar, file.created_at).query(`
+                INSERT INTO Files (filename, original_filename, file_path, file_size, mime_type, subtask_id, uploaded_by, created_at)
+                VALUES (@filename, @original_filename, @file_path, @file_size, @mime_type, @subtask_id, @uploaded_by, @created_at)
+              `);
+          }
+        }
 
         // Log if this is a new subtask
         if (!existingTitles.includes(subtask.title)) {
@@ -562,7 +752,73 @@ const updateTask = async (req, res) => {
       }
     }
 
-    res.json({ message: "Task updated successfully" });
+    // Fetch the updated complete task
+    const updatedTaskResult = await pool.request().input("taskId", sql.Int, id)
+      .query(`
+      SELECT
+        t.*,
+        c.name as created_by_name, c.email as created_by_email,
+        ad.name as assigned_to_div_name, ad.email as assigned_to_div_email,
+        adu.name as assigned_to_div_user_name
+      FROM Tasks t
+      LEFT JOIN Users c ON t.created_by = c.id
+      LEFT JOIN Users ad ON t.assigned_to_div = ad.id
+      LEFT JOIN DivUsers adu ON t.assigned_to_div_user = adu.id
+      WHERE t.id = @taskId
+    `);
+
+    const updatedTask = updatedTaskResult.recordset[0];
+
+    // Fetch tags
+    const tagsResult = await pool.request().input("taskId", sql.Int, id).query(`
+      SELECT tg.id, tg.name
+      FROM Tags tg
+      INNER JOIN TaskTags tt ON tg.id = tt.tag_id
+      WHERE tt.task_id = @taskId
+      ORDER BY tg.name
+    `);
+    updatedTask.tags = tagsResult.recordset;
+
+    // Fetch subtasks
+    const subtasksResult = await pool.request().input("taskId", sql.Int, id)
+      .query(`
+      SELECT s.id, s.task_id, s.title, s.status, s.created_at
+      FROM Subtasks s
+      WHERE s.task_id = @taskId
+      ORDER BY s.created_at
+    `);
+    updatedTask.subtasks = subtasksResult.recordset;
+
+    // Fetch files for each subtask
+    for (let subtask of updatedTask.subtasks) {
+      const subtaskFilesResult = await pool
+        .request()
+        .input("subtaskId", sql.Int, subtask.id).query(`
+          SELECT id, filename, original_filename, file_size, mime_type, created_at
+          FROM Files 
+          WHERE subtask_id = @subtaskId
+          ORDER BY created_at DESC
+        `);
+      subtask.files = subtaskFilesResult.recordset;
+    }
+
+    // Fetch files
+    const filesResult = await pool.request().input("taskId", sql.Int, id)
+      .query(`
+      SELECT
+        f.id, f.filename, f.original_filename, f.file_size, f.mime_type, f.created_at,
+        u.name as uploaded_by_name, u.email as uploaded_by_email
+      FROM Files f
+      LEFT JOIN Users u ON f.uploaded_by = u.id
+      WHERE f.task_id = @taskId
+      ORDER BY f.created_at DESC
+    `);
+    updatedTask.files = filesResult.recordset;
+
+    res.json({
+      message: "Task updated successfully",
+      task: updatedTask,
+    });
   } catch (error) {
     console.error("Update task error:", error);
     res.status(500).json({ error: "Failed to update task" });
@@ -578,7 +834,7 @@ const deleteTask = async (req, res) => {
     const taskCheck = await pool
       .request()
       .input("id", sql.Int, id)
-      .query("SELECT assigned_to, created_by FROM Tasks WHERE id = @id");
+      .query("SELECT assigned_to_div, created_by FROM Tasks WHERE id = @id");
 
     if (taskCheck.recordset.length === 0) {
       return res.status(404).json({ error: "Task not found" });
@@ -591,7 +847,25 @@ const deleteTask = async (req, res) => {
         .json({ error: "Only admins and managers can delete tasks" });
     }
 
-    // Delete subtasks first
+    // Delete associated files from disk and database
+    const filesResult = await pool
+      .request()
+      .input("taskId", sql.Int, id)
+      .query("SELECT file_path FROM Files WHERE task_id = @taskId");
+
+    for (const file of filesResult.recordset) {
+      const fs = require("fs");
+      if (fs.existsSync(file.file_path)) {
+        fs.unlinkSync(file.file_path);
+      }
+    }
+
+    await pool
+      .request()
+      .input("taskId", sql.Int, id)
+      .query("DELETE FROM Files WHERE task_id = @taskId");
+
+    // Delete subtasks (cascade will handle subtask files)
     await pool
       .request()
       .input("taskId", sql.Int, id)
@@ -620,7 +894,7 @@ const getTaskSummary = async (req, res) => {
     const request = pool.request();
 
     if (userRole === "user") {
-      whereClause = "WHERE assigned_to = @userId";
+      whereClause = "WHERE assigned_to_div = @userId";
       request.input("userId", sql.Int, userId);
     }
 
@@ -631,7 +905,7 @@ const getTaskSummary = async (req, res) => {
         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
         SUM(CASE WHEN status = 'not_started' THEN 1 ELSE 0 END) as not_started,
         SUM(CASE WHEN status = 'blocked' THEN 1 ELSE 0 END) as blocked,
-        SUM(CASE WHEN due_date < CAST(GETDATE() AS DATE) AND status != 'completed' THEN 1 ELSE 0 END) as overdue
+        SUM(CASE WHEN due_date < datetime('now') AND status != 'completed' THEN 1 ELSE 0 END) as overdue
       FROM Tasks
       ${whereClause}
     `);
@@ -652,7 +926,7 @@ const getTaskHistory = async (req, res) => {
     const taskCheck = await pool
       .request()
       .input("id", sql.Int, id)
-      .query("SELECT id, assigned_to FROM Tasks WHERE id = @id");
+      .query("SELECT id, assigned_to_div FROM Tasks WHERE id = @id");
 
     if (taskCheck.recordset.length === 0) {
       return res.status(404).json({ error: "Task not found" });
@@ -661,7 +935,7 @@ const getTaskHistory = async (req, res) => {
     const task = taskCheck.recordset[0];
 
     // Permission check
-    if (req.user.role === "user" && task.assigned_to !== req.user.id) {
+    if (req.user.role === "user" && task.assigned_to_div !== req.user.id) {
       return res.status(403).json({ error: "Access denied" });
     }
 

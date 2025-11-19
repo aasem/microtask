@@ -8,8 +8,8 @@ interface TaskState {
   error: string | null;
   fetchTasks: () => Promise<void>;
   fetchSummary: () => Promise<void>;
-  createTask: (taskData: Partial<Task>) => Promise<void>;
-  updateTask: (id: number, taskData: Partial<Task>) => Promise<void>;
+  createTask: (taskData: Partial<Task>) => Promise<Task>;
+  updateTask: (id: number, taskData: Partial<Task>) => Promise<Task>;
   deleteTask: (id: number) => Promise<void>;
 }
 
@@ -41,10 +41,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   createTask: async (taskData: Partial<Task>) => {
     set({ loading: true, error: null });
     try {
-      await taskService.createTask(taskData);
+      const createdTask = await taskService.createTask(taskData);
+      console.log("Task created by service:", createdTask);
       await get().fetchTasks();
       await get().fetchSummary();
       set({ loading: false });
+      console.log("Returning created task from store:", createdTask);
+      return createdTask;
     } catch (error: any) {
       set({ error: error.message || 'Failed to create task', loading: false });
       throw error;
@@ -54,10 +57,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   updateTask: async (id: number, taskData: Partial<Task>) => {
     set({ loading: true, error: null });
     try {
-      await taskService.updateTask(id, taskData);
+      const updatedTask = await taskService.updateTask(id, taskData);
       await get().fetchTasks();
       await get().fetchSummary();
       set({ loading: false });
+      return updatedTask;
     } catch (error: any) {
       set({ error: error.message || 'Failed to update task', loading: false });
       throw error;

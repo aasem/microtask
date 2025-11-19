@@ -17,6 +17,7 @@ if (!fs.existsSync(dbDir)) {
 let db = null;
 let SQL = null;
 let isInitialized = false;
+let lastFileModTime = null;
 
 // SQLite compatibility layer to mimic mssql interface
 class SqliteRequest {
@@ -162,9 +163,31 @@ const sql = {
 function saveDatabase() {
   if (db) {
     try {
+      // Check if file was modified externally before saving
+      if (fs.existsSync(dbPath) && lastFileModTime) {
+        const currentModTime = fs.statSync(dbPath).mtimeMs;
+        if (currentModTime > lastFileModTime) {
+          console.warn(
+            "⚠️  Warning: Database file was modified externally. Reloading before save to prevent data loss..."
+          );
+          // Reload from disk to get latest data before saving
+          const buffer = fs.readFileSync(dbPath);
+          const tempDb = new db.constructor(buffer);
+          // Close old db and use the reloaded one
+          db.close();
+          db = tempDb;
+          db.run("PRAGMA foreign_keys = ON");
+        }
+      }
+
       const data = db.export();
       const buffer = Buffer.from(data);
       fs.writeFileSync(dbPath, buffer);
+
+      // Update last modification time after saving
+      if (fs.existsSync(dbPath)) {
+        lastFileModTime = fs.statSync(dbPath).mtimeMs;
+      }
     } catch (error) {
       console.error("Error saving database:", error);
     }
@@ -183,8 +206,7 @@ function initializeSchema() {
   );
 
   if (tableCheck.length > 0 && tableCheck[0].values.length > 0) {
-    console.log("Database schema already exists, checking for migrations...");
-    runMigrations();
+    console.log("✅ Database schema already exists, skipping initialization.");
     isInitialized = true;
     return;
   }
@@ -201,6 +223,18 @@ function initializeSchema() {
     )
   `);
 
+  // Create DivUsers Table (Users without login capability)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS DivUsers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+      UNIQUE(user_id)
+    )
+  `);
+
   // Create Tasks Table
   db.run(`
     CREATE TABLE IF NOT EXISTS Tasks (
@@ -208,14 +242,16 @@ function initializeSchema() {
       title TEXT NOT NULL,
       description TEXT,
       priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('high', 'medium', 'low')),
-      assigned_to INTEGER,
+      assigned_to_div INTEGER,
+      assigned_to_div_user INTEGER,
       created_by INTEGER NOT NULL,
       assignment_date DATE NOT NULL DEFAULT (date('now')),
-      due_date DATE,
+      due_date DATETIME,
       status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed', 'blocked')),
       tags TEXT,
       notes TEXT,
-      FOREIGN KEY (assigned_to) REFERENCES Users(id) ON DELETE SET NULL,
+      FOREIGN KEY (assigned_to_div) REFERENCES Users(id) ON DELETE SET NULL,
+      FOREIGN KEY (assigned_to_div_user) REFERENCES DivUsers(id) ON DELETE SET NULL,
       FOREIGN KEY (created_by) REFERENCES Users(id) ON DELETE NO ACTION
     )
   `);
@@ -227,6 +263,7 @@ function initializeSchema() {
       task_id INTEGER NOT NULL,
       title TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'completed')),
+      created_at DATETIME NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (task_id) REFERENCES Tasks(id) ON DELETE CASCADE
     )
   `);
@@ -270,9 +307,35 @@ function initializeSchema() {
     )
   `);
 
+  // Create Files Table for Task and Subtask attachments
+  db.run(`
+    CREATE TABLE IF NOT EXISTS Files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      filename TEXT NOT NULL,
+      original_filename TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      mime_type TEXT NOT NULL,
+      task_id INTEGER,
+      subtask_id INTEGER,
+      uploaded_by INTEGER NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (task_id) REFERENCES Tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (subtask_id) REFERENCES Subtasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (uploaded_by) REFERENCES Users(id) ON DELETE NO ACTION,
+      CHECK ((task_id IS NOT NULL AND subtask_id IS NULL) OR (task_id IS NULL AND subtask_id IS NOT NULL))
+    )
+  `);
+
   // Create Indexes
   db.run(
-    `CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON Tasks(assigned_to)`
+    `CREATE INDEX IF NOT EXISTS idx_divusers_user_id ON DivUsers(user_id)`
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to_div ON Tasks(assigned_to_div)`
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to_div_user ON Tasks(assigned_to_div_user)`
   );
   db.run(
     `CREATE INDEX IF NOT EXISTS idx_tasks_created_by ON Tasks(created_by)`
@@ -296,11 +359,15 @@ function initializeSchema() {
     `CREATE INDEX IF NOT EXISTS idx_tasktags_task_id ON TaskTags(task_id)`
   );
   db.run(`CREATE INDEX IF NOT EXISTS idx_tasktags_tag_id ON TaskTags(tag_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_files_task_id ON Files(task_id)`);
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_files_subtask_id ON Files(subtask_id)`
+  );
+  db.run(
+    `CREATE INDEX IF NOT EXISTS idx_files_uploaded_by ON Files(uploaded_by)`
+  );
 
   console.log("✅ Database schema created successfully!");
-
-  // Run migrations
-  runMigrations();
 
   // Save database after schema creation
   saveDatabase();
@@ -308,87 +375,19 @@ function initializeSchema() {
   isInitialized = true;
 }
 
-// Run migrations for existing data
-function runMigrations() {
-  try {
-    // Migration: Migrate existing tags from Tasks.tags column to new structure
-    // Check if Tasks table has a tags column
-    const tableInfo = db.exec(`PRAGMA table_info(Tasks)`);
-    const hasTagsColumn =
-      tableInfo.length > 0 &&
-      tableInfo[0].values.some((col) => col[1] === "tags");
-
-    if (hasTagsColumn) {
-      console.log("Running tags migration...");
-
-      const tasksResult = db.exec(
-        `SELECT id, tags FROM Tasks WHERE tags IS NOT NULL AND tags != ''`
-      );
-
-      if (tasksResult.length > 0 && tasksResult[0].values.length > 0) {
-        const tasks = tasksResult[0].values.map((row) => ({
-          id: row[0],
-          tags: row[1],
-        }));
-
-        for (const task of tasks) {
-          if (!task.tags) continue;
-
-          const tagNames = task.tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter((t) => t.length > 0);
-
-          for (const tagName of tagNames) {
-            // Insert tag if it doesn't exist
-            let tagResult = db.exec(
-              `SELECT id FROM Tags WHERE name = '${tagName.replace(
-                /'/g,
-                "''"
-              )}'`
-            );
-            let tagId;
-
-            if (tagResult.length === 0 || tagResult[0].values.length === 0) {
-              db.run(
-                `INSERT INTO Tags (name) VALUES ('${tagName.replace(
-                  /'/g,
-                  "''"
-                )}')`
-              );
-              tagResult = db.exec("SELECT last_insert_rowid() as id");
-              tagId = tagResult[0].values[0][0];
-            } else {
-              tagId = tagResult[0].values[0][0];
-            }
-
-            // Link tag to task if not already linked
-            const existingLink = db.exec(
-              `SELECT 1 FROM TaskTags WHERE task_id = ${task.id} AND tag_id = ${tagId}`
-            );
-
-            if (
-              existingLink.length === 0 ||
-              existingLink[0].values.length === 0
-            ) {
-              db.run(
-                `INSERT INTO TaskTags (task_id, tag_id) VALUES (${task.id}, ${tagId})`
-              );
-            }
-          }
-        }
-
-        console.log("✅ Tags migration completed!");
-      }
-    }
-  } catch (error) {
-    console.error("Migration error:", error);
-    // Don't throw - migrations are optional
-  }
-}
-
 async function getConnection() {
   try {
+    // Check if database file was modified externally and reload if necessary
+    if (db && fs.existsSync(dbPath) && lastFileModTime) {
+      const currentModTime = fs.statSync(dbPath).mtimeMs;
+      if (currentModTime > lastFileModTime) {
+        console.log("🔄 Database file was modified externally, reloading...");
+        db.close();
+        db = null;
+        isInitialized = false;
+      }
+    }
+
     if (db) {
       return new SqlitePool(db);
     }
@@ -402,9 +401,13 @@ async function getConnection() {
     if (fs.existsSync(dbPath)) {
       const buffer = fs.readFileSync(dbPath);
       db = new SQL.Database(buffer);
+      // Track file modification time
+      lastFileModTime = fs.statSync(dbPath).mtimeMs;
+      console.log("📂 Loaded existing database from disk");
     } else {
       // Create new database
       db = new SQL.Database();
+      console.log("🆕 Created new database");
     }
 
     // Enable foreign keys
@@ -428,6 +431,7 @@ async function closeConnection() {
       db.close();
       db = null;
       isInitialized = false;
+      lastFileModTime = null;
       console.log("Database connection closed");
     }
   } catch (error) {
@@ -439,11 +443,13 @@ async function reloadDatabase() {
   try {
     console.log("Reloading database from disk...");
 
-    // Close existing connection
+    // Close existing connection (save first to preserve any changes)
     if (db) {
+      saveDatabase();
       db.close();
       db = null;
       isInitialized = false;
+      lastFileModTime = null;
     }
 
     // Reconnect (will load fresh from disk)

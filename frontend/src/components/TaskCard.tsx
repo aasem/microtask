@@ -1,16 +1,8 @@
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import {
-  Calendar,
-  User,
-  Edit,
-  Trash2,
-  AlertCircle,
-  Clock,
-  Tag,
-} from "lucide-react";
+import { useState } from "react";
+import { Calendar, Edit, Trash2, AlertCircle, Clock, Tag } from "lucide-react";
 import { Task } from "../services/taskService";
-import { getPriorityColor, getStatusColor } from "../utils/roleUtils";
 
 interface TaskCardProps {
   task: Task;
@@ -28,6 +20,8 @@ const TaskCard = ({
   canDelete,
 }: TaskCardProps) => {
   const navigate = useNavigate();
+  const [isHovered, setIsHovered] = useState(false);
+
   const isOverdue =
     task.due_date &&
     new Date(task.due_date) < new Date() &&
@@ -57,39 +51,50 @@ const TaskCard = ({
 
   return (
     <div
-      className={`card custom-card shadow-card hover:border-gray-300 cursor-pointer bg-gradient-to-br from-white to-gray-50 ${
+      className={`card custom-card shadow-card hover:border-gray-300 cursor-pointer bg-gradient-to-br from-white to-gray-50 py-3 ${
         isOverdue ? "border-l-4 border-l-danger pl-4" : "pl-5"
       }`}
       onClick={handleCardClick}
     >
-      {/* Card Header - Title and Actions */}
-      <div className="flex justify-between items-start gap-4 mb-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+      {/* Compact Single Line Layout */}
+      <div className="flex justify-between items-center gap-4">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* Status Dot and Title */}
+          <div className="flex items-center gap-2 min-w-0">
             <span
               className={`status-dot ${getStatusDotClass(
                 task.status
               )} flex-shrink-0`}
             />
-            <h3 className="text-2xl font-bold text-gray-900 leading-tight truncate">
-              {task.title}
-            </h3>
+            <div
+              className="relative w-80 overflow-hidden"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
+              <h3
+                className={`text-lg font-semibold text-gray-900 transition-transform duration-1000 ease-linear ${
+                  isHovered
+                    ? "whitespace-nowrap animate-marquee-simple"
+                    : "truncate"
+                }`}
+              >
+                {task.title}
+              </h3>
+            </div>
             {isOverdue && (
               <span title="Overdue" className="text-danger flex-shrink-0">
-                <AlertCircle className="w-4 h-4" />
+                <AlertCircle className="w-3.5 h-3.5" />
               </span>
             )}
           </div>
 
-          {/* Created Date and Due Date - Prominent */}
-          <div className="flex items-center gap-4 text-xs text-gray-600 ml-6">
+          {/* Metadata in single line */}
+          <div className="flex items-center gap-3 text-xs text-gray-600 flex-shrink-0">
             {task.assignment_date && (
               <div className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <Clock className="w-3 h-3 text-gray-400" />
                 <span className="font-medium">Created:</span>
-                <span>
-                  {format(new Date(task.assignment_date), "MMM dd, yyyy")}
-                </span>
+                <span>{format(new Date(task.assignment_date), "MMM dd")}</span>
               </div>
             )}
             {task.due_date && (
@@ -99,18 +104,37 @@ const TaskCard = ({
                 }`}
               >
                 <Calendar
-                  className={`w-3.5 h-3.5 ${
+                  className={`w-3 h-3 ${
                     isOverdue ? "text-danger" : "text-gray-400"
                   }`}
                 />
                 <span className="font-medium">Due:</span>
                 <span className={isOverdue ? "font-semibold" : ""}>
-                  {format(new Date(task.due_date), "MMM dd, yyyy")}
+                  {format(new Date(task.due_date), "MMM dd, HH:mm")}
                 </span>
               </div>
             )}
           </div>
+
+          {/* Tags inline */}
+          {task.tags && task.tags.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <Tag className="w-3 h-3 text-accent" />
+              <div className="flex gap-1">
+                {task.tags.map((tag) => (
+                  <span
+                    key={tag.id}
+                    className="badge bg-accent bg-opacity-10 text-accent border border-accent border-opacity-30 text-xs px-1.5 py-0.5"
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Action Buttons */}
         <div className="flex gap-1 flex-shrink-0">
           {canEdit && (
             <button
@@ -132,23 +156,6 @@ const TaskCard = ({
           )}
         </div>
       </div>
-
-      {/* Tags Section - Separated and Clearly Identifiable */}
-      {task.tags && task.tags.length > 0 && (
-        <div className="ml-6 mb-2 flex items-center gap-2 flex-wrap">
-          <Tag className="w-3.5 h-3.5 text-accent flex-shrink-0" />
-          <div className="flex flex-wrap gap-1.5">
-            {task.tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="badge bg-accent bg-opacity-10 text-accent border border-accent border-opacity-30 text-xs px-2 py-0.5"
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Priority, Status, and Other Metadata - Compact Row */}
       {/* <div className="ml-6 flex flex-wrap items-center gap-2 text-xs">

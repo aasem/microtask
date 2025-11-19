@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, RotateCcw } from "lucide-react";
+import { Plus, RotateCcw, Search } from "lucide-react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import TaskCard from "../components/TaskCard";
@@ -9,6 +9,7 @@ import Toast from "../components/Toast";
 import { useTaskStore } from "../store/taskStore";
 import { useAuthStore } from "../store/authStore";
 import { Task } from "../services/taskService";
+import { Tag, tagService } from "../services/tagService";
 import { canCreateTask, canDeleteTask, canEditTask } from "../utils/roleUtils";
 
 const Dashboard = () => {
@@ -31,7 +32,10 @@ const Dashboard = () => {
     priority: [] as string[],
     status: "",
     dueDateRange: { start: "", end: "" },
+    tags: [] as Tag[],
   });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -40,7 +44,17 @@ const Dashboard = () => {
   useEffect(() => {
     fetchTasks();
     fetchSummary();
+    fetchAvailableTags();
   }, [fetchTasks, fetchSummary]);
+
+  const fetchAvailableTags = async () => {
+    try {
+      const tags = await tagService.getAllTags();
+      setAvailableTags(tags);
+    } catch (error) {
+      console.error("Failed to fetch tags:", error);
+    }
+  };
 
   const handleCreateTask = () => {
     setSelectedTask(null);
@@ -73,15 +87,21 @@ const Dashboard = () => {
 
   const handleSaveTask = async (taskData: Partial<Task>) => {
     try {
+      let savedTask: Task;
       if (selectedTask) {
-        await updateTask(selectedTask.id, taskData);
+        savedTask = await updateTask(selectedTask.id, taskData);
+        console.log("Updated task from store:", savedTask);
         setToast({ message: "Task updated successfully", type: "success" });
       } else {
-        await createTask(taskData);
+        savedTask = await createTask(taskData);
+        console.log("Created task from store:", savedTask);
         setToast({ message: "Task created successfully", type: "success" });
       }
       setIsModalOpen(false);
+      console.log("Returning savedTask from handleSaveTask:", savedTask);
+      return savedTask;
     } catch (err) {
+      console.error("Error in handleSaveTask:", err);
       throw err;
     }
   };
@@ -91,11 +111,28 @@ const Dashboard = () => {
       priority: [],
       status: "",
       dueDateRange: { start: "", end: "" },
+      tags: [],
     });
+    setSearchQuery("");
   };
 
   // Filter tasks
   const filteredTasks = tasks.filter((task) => {
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesTitle = task.title.toLowerCase().includes(query);
+      const matchesDescription = task.description?.toLowerCase().includes(query);
+      const matchesNotes = task.notes?.toLowerCase().includes(query);
+      const matchesTags = task.tags?.some(tag => 
+        tag.name.toLowerCase().includes(query)
+      );
+      
+      if (!matchesTitle && !matchesDescription && !matchesNotes && !matchesTags) {
+        return false;
+      }
+    }
+
     // Priority filter
     if (
       filters.priority.length > 0 &&
@@ -107,6 +144,17 @@ const Dashboard = () => {
     // Status filter
     if (filters.status && task.status !== filters.status) {
       return false;
+    }
+
+    // Tags filter
+    if (filters.tags.length > 0) {
+      const taskTagIds = task.tags?.map(tag => tag.id) || [];
+      const selectedTagIds = filters.tags.map(tag => tag.id);
+      const hasMatchingTag = selectedTagIds.some(tagId => taskTagIds.includes(tagId));
+      
+      if (!hasMatchingTag) {
+        return false;
+      }
     }
 
     // Due date range filter
@@ -129,7 +177,9 @@ const Dashboard = () => {
     filters.priority.length > 0 ||
     filters.status !== "" ||
     filters.dueDateRange.start ||
-    filters.dueDateRange.end;
+    filters.dueDateRange.end ||
+    filters.tags.length > 0 ||
+    searchQuery.trim() !== "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -143,33 +193,51 @@ const Dashboard = () => {
         <div className="flex flex-col lg:flex-row gap-8 mt-2">
           {/* Sidebar Filters */}
           <div className="lg:w-64 flex-shrink-0">
-            <Sidebar filters={filters} onFilterChange={setFilters} />
+            <Sidebar 
+              filters={filters} 
+              onFilterChange={setFilters} 
+              availableTags={availableTags}
+            />
           </div>
 
           {/* Task List */}
           <div className="flex-1 ml-3">
-            <div className="flex justify-end items-center gap-2 mb-2">
-              {/* <h2 className="text-2xl font-bold text-gray-900">
-                Tasks ({filteredTasks.length})
-              </h2> */}
-              {hasActiveFilters && (
-                <button
-                  onClick={handleResetFilters}
-                  className="btn-secondary flex items-center space-x-2"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                  <span>Reset Filters</span>
-                </button>
-              )}
-              {user && canCreateTask(user.role) && (
-                <button
-                  onClick={handleCreateTask}
-                  className="btn-primary flex items-center space-x-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>Add Task</span>
-                </button>
-              )}
+            <div className="flex justify-between items-center gap-4 mb-2">
+              {/* Search Filter */}
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search tasks..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                {hasActiveFilters && (
+                  <button
+                    onClick={handleResetFilters}
+                    className="btn-secondary flex items-center space-x-2"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    <span>Reset Filters</span>
+                  </button>
+                )}
+                {user && canCreateTask(user.role) && (
+                  <button
+                    onClick={handleCreateTask}
+                    className="btn-primary flex items-center space-x-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span>Add Task</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {loading && (
@@ -218,7 +286,11 @@ const Dashboard = () => {
                     onDelete={handleDeleteTask}
                     canEdit={
                       user
-                        ? canEditTask(user.role, task.assigned_to || 0, user.id)
+                        ? canEditTask(
+                            user.role,
+                            task.assigned_to_div || 0,
+                            user.id
+                          )
                         : false
                     }
                     canDelete={user ? canDeleteTask(user.role) : false}
