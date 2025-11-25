@@ -16,20 +16,20 @@ const DashboardCards = ({ summary }: DashboardCardsProps) => {
     {
       title: "In Progress",
       value: summary.in_progress ?? 0,
-      icon: <PlayCircle className="w-8 h-8 text-amber-600" />,
-      bgColor: "bg-amber-100",
+      icon: <PlayCircle className="w-8 h-8 text-blue-700" />,
+      bgColor: "bg-blue-50",
     },
     {
       title: "Completed",
       value: summary.completed ?? 0,
-      icon: <CheckCircle className="w-8 h-8 text-emerald-600" />,
-      bgColor: "bg-emerald-100",
+      icon: <CheckCircle className="w-8 h-8 text-green-700" />,
+      bgColor: "bg-green-50",
     },
     {
       title: "Overdue",
       value: summary.overdue ?? 0,
-      icon: <AlertCircle className="w-8 h-8 text-rose-600" />,
-      bgColor: "bg-rose-100",
+      icon: <AlertCircle className="w-8 h-8 text-red-700" />,
+      bgColor: "bg-red-50",
     },
   ];
 

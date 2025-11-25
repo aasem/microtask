@@ -47,8 +47,8 @@ const getAllTasks = async (req, res) => {
 
     let query = `
       SELECT 
-        t.id, t.title, t.description, t.priority, t.assigned_to_div, t.assigned_to_div_user, 
-        t.assignment_date, t.due_date, t.status, t.notes, t.created_by,
+        t.id, t.title, t.description, t.assigned_to_div, t.assigned_to_div_user, 
+        t.assignment_date, t.due_date, t.status, t.created_by,
         u.name as assigned_to_div_name, u.email as assigned_to_div_email,
         du.name as assigned_to_div_user_name,
         c.name as created_by_name
@@ -64,7 +64,7 @@ const getAllTasks = async (req, res) => {
     }
     // Admin and Manager see all tasks (or you can filter manager by team)
 
-    query += ` ORDER BY t.due_date ASC, t.priority DESC`;
+    query += ` ORDER BY t.due_date ASC`;
 
     const request = pool.request();
     if (userRole === "user") {
@@ -101,8 +101,8 @@ const getTaskById = async (req, res) => {
 
     const result = await pool.request().input("id", sql.Int, id).query(`
         SELECT 
-          t.id, t.title, t.description, t.priority, t.assigned_to_div, t.assigned_to_div_user,
-          t.assignment_date, t.due_date, t.status, t.notes, t.created_by,
+          t.id, t.title, t.description, t.assigned_to_div, t.assigned_to_div_user,
+          t.assignment_date, t.due_date, t.status, t.created_by,
           u.name as assigned_to_div_name, u.email as assigned_to_div_email,
           du.name as assigned_to_div_user_name, c.name as created_by_name
         FROM Tasks t
@@ -177,13 +177,11 @@ const createTask = async (req, res) => {
     const {
       title,
       description,
-      priority = "medium",
       assigned_to_div,
       assigned_to_div_user,
       due_date,
-      status = "not_started",
+      status = "in_progress",
       tag_ids = [],
-      notes,
       subtasks = [],
     } = req.body;
 
@@ -205,7 +203,6 @@ const createTask = async (req, res) => {
       .request()
       .input("title", sql.VarChar, title)
       .input("description", sql.Text, description || null)
-      .input("priority", sql.VarChar, priority)
       .input("assigned_to_div", sql.Int, assigned_to_div || null)
       .input("assigned_to_div_user", sql.Int, assigned_to_div_user || null)
       .input("created_by", sql.Int, req.user.id)
@@ -215,10 +212,9 @@ const createTask = async (req, res) => {
         new Date().toISOString().split("T")[0]
       )
       .input("due_date", sql.Text, normalizeDateTimeInput(due_date))
-      .input("status", sql.VarChar, status)
-      .input("notes", sql.Text, notes || null).query(`
-        INSERT INTO Tasks (title, description, priority, assigned_to_div, assigned_to_div_user, created_by, assignment_date, due_date, status, notes)
-        VALUES (@title, @description, @priority, @assigned_to_div, @assigned_to_div_user, @created_by, @assignment_date, @due_date, @status, @notes);
+      .input("status", sql.VarChar, status).query(`
+        INSERT INTO Tasks (title, description, assigned_to_div, assigned_to_div_user, created_by, assignment_date, due_date, status)
+        VALUES (@title, @description, @assigned_to_div, @assigned_to_div_user, @created_by, @assignment_date, @due_date, @status);
         SELECT SCOPE_IDENTITY() AS id;
       `);
 
@@ -278,7 +274,7 @@ const createTask = async (req, res) => {
           .request()
           .input("task_id", sql.Int, taskId)
           .input("title", sql.VarChar, subtask.title)
-          .input("status", sql.VarChar, subtask.status || "not_started").query(`
+          .input("status", sql.VarChar, subtask.status || "in_progress").query(`
             INSERT INTO Subtasks (task_id, title, status)
             VALUES (@task_id, @title, @status)
           `);
@@ -378,13 +374,11 @@ const updateTask = async (req, res) => {
     const {
       title,
       description,
-      priority,
       assigned_to_div,
       assigned_to_div_user,
       due_date,
       status,
       tag_ids,
-      notes,
       subtasks,
     } = req.body;
 
@@ -468,21 +462,6 @@ const updateTask = async (req, res) => {
     if (description !== undefined) {
       updateFields.push("description = @description");
       request.input("description", sql.Text, description);
-    }
-    if (priority !== undefined && priority !== task.priority) {
-      updateFields.push("priority = @priority");
-      request.input("priority", sql.VarChar, priority);
-      // Log priority change
-      await logTaskHistory(
-        pool,
-        id,
-        req.user.id,
-        "priority_change",
-        "priority",
-        task.priority,
-        priority,
-        `Priority changed from ${task.priority} to ${priority}`
-      );
     }
     if (
       assigned_to_div !== undefined &&
@@ -651,22 +630,6 @@ const updateTask = async (req, res) => {
         );
       }
     }
-    if (notes !== undefined && notes !== task.notes) {
-      updateFields.push("notes = @notes");
-      request.input("notes", sql.Text, notes);
-      // Log notes update
-      await logTaskHistory(
-        pool,
-        id,
-        req.user.id,
-        "notes_updated",
-        "notes",
-        task.notes || "None",
-        notes || "None",
-        `Notes changed from "${task.notes || "None"}" to "${notes || "None"}"`
-      );
-    }
-
     if (updateFields.length > 0) {
       await request.query(
         `UPDATE Tasks SET ${updateFields.join(", ")} WHERE id = @id`
@@ -710,7 +673,7 @@ const updateTask = async (req, res) => {
           .request()
           .input("task_id", sql.Int, id)
           .input("title", sql.VarChar, subtask.title)
-          .input("status", sql.VarChar, subtask.status || "not_started").query(`
+          .input("status", sql.VarChar, subtask.status || "in_progress").query(`
             INSERT INTO Subtasks (task_id, title, status)
             VALUES (@task_id, @title, @status);
             SELECT last_insert_rowid() AS id;

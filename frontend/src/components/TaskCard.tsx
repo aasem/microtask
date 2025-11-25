@@ -1,6 +1,5 @@
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { Calendar, Edit, Trash2, AlertCircle, Clock, Tag } from "lucide-react";
 import { Task } from "../services/taskService";
 
@@ -20,7 +19,6 @@ const TaskCard = ({
   canDelete,
 }: TaskCardProps) => {
   const navigate = useNavigate();
-  const [isHovered, setIsHovered] = useState(false);
 
   const isOverdue =
     task.due_date &&
@@ -35,103 +33,180 @@ const TaskCard = ({
     navigate(`/tasks/${task.id}`);
   };
 
-  // Status dot color
-  const getStatusDotClass = (status: string) => {
+  // Get status-based dot color (overdue overrides status)
+  const getStatusDotColor = () => {
+    // Overdue tasks should be red regardless of status
+    if (isOverdue && task.status !== "completed") {
+      return "bg-red-700";
+    }
+    switch (task.status) {
+      case "completed":
+        return "bg-green-700";
+      case "in_progress":
+        return "bg-blue-700";
+      case "suspended":
+        return "bg-red-700";
+      default:
+        return "bg-blue-700";
+    }
+  };
+
+  // Get status-based text color (overdue overrides status)
+  const getStatusTextColor = (status: string) => {
+    // Overdue tasks should be red regardless of status
+    if (isOverdue && status !== "completed") {
+      return "text-red-700";
+    }
     switch (status) {
       case "completed":
-        return "status-completed";
+        return "text-green-700";
       case "in_progress":
-        return "status-in-progress";
+        return "text-blue-700";
       case "suspended":
-        return "status-suspended";
+        return "text-red-700";
       default:
-        return "status-not-started";
+        return "text-blue-700";
+    }
+  };
+
+  // Get status-based background and border color (overdue overrides status)
+  const getStatusCardColor = () => {
+    // Overdue tasks should be red regardless of status
+    if (isOverdue && task.status !== "completed") {
+      return "bg-red-50 border-l-red-700";
+    }
+    switch (task.status) {
+      case "completed":
+        return "bg-green-50 border-l-green-700";
+      case "in_progress":
+        return "bg-blue-50 border-l-blue-700";
+      case "suspended":
+        return "bg-red-50 border-l-red-700";
+      default:
+        return "bg-blue-50 border-l-blue-700";
+    }
+  };
+
+  // Get status-based tag colors (overdue overrides status)
+  const getStatusTagColor = () => {
+    // Overdue tasks should be red regardless of status
+    if (isOverdue && task.status !== "completed") {
+      return {
+        bg: "bg-red-50",
+        text: "text-red-700",
+        border: "border-red-700",
+        icon: "text-red-700"
+      };
+    }
+    switch (task.status) {
+      case "completed":
+        return {
+          bg: "bg-green-50",
+          text: "text-green-700",
+          border: "border-green-700",
+          icon: "text-green-700"
+        };
+      case "in_progress":
+        return {
+          bg: "bg-blue-50",
+          text: "text-blue-700",
+          border: "border-blue-700",
+          icon: "text-blue-700"
+        };
+      case "suspended":
+        return {
+          bg: "bg-red-50",
+          text: "text-red-700",
+          border: "border-red-700",
+          icon: "text-red-700"
+        };
+      default:
+        return {
+          bg: "bg-blue-50",
+          text: "text-blue-700",
+          border: "border-blue-700",
+          icon: "text-blue-700"
+        };
     }
   };
 
   return (
     <div
-      className={`card custom-card shadow-card hover:border-gray-300 cursor-pointer bg-gradient-to-br from-white to-gray-50 py-3 ${
-        isOverdue ? "border-l-4 border-l-danger pl-4" : "pl-5"
-      }`}
+      className={`card custom-card shadow-card hover:border-gray-300 cursor-pointer py-3 border-l-4 ${getStatusCardColor()} pl-4`}
       onClick={handleCardClick}
     >
-      {/* Compact Single Line Layout */}
-      <div className="flex justify-between items-center gap-4">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Status Dot and Title */}
-          <div className="flex items-center gap-2 min-w-0">
-            <span
-              className={`status-dot ${getStatusDotClass(
-                task.status
-              )} flex-shrink-0`}
-            />
-            <div
-              className="relative w-80 overflow-hidden"
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            >
-              <h3
-                className={`text-lg font-semibold text-gray-900 transition-transform duration-1000 ease-linear ${
-                  isHovered
-                    ? "whitespace-nowrap animate-marquee-simple"
-                    : "truncate"
-                }`}
-              >
+      {/* Task Content Layout */}
+      <div className="flex justify-between items-start gap-4">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          {/* Status Dot */}
+          <span
+            className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor()} flex-shrink-0 mt-0.5`}
+          />
+          
+          {/* Title, Description and Metadata */}
+          <div className="flex-1 min-w-0">
+            {/* Title and Metadata in same line */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <h3 className={`text-lg font-bold ${getStatusTextColor(task.status)}`}>
                 {task.title}
               </h3>
-            </div>
-            {isOverdue && (
-              <span title="Overdue" className="text-danger flex-shrink-0">
-                <AlertCircle className="w-3.5 h-3.5" />
-              </span>
-            )}
-          </div>
-
-          {/* Metadata in single line */}
-          <div className="flex items-center gap-3 text-xs text-gray-600 flex-shrink-0">
-            {task.assignment_date && (
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3 text-gray-400" />
-                <span className="font-medium">Created:</span>
-                <span>{format(new Date(task.assignment_date), "MMM dd")}</span>
-              </div>
-            )}
-            {task.due_date && (
-              <div
-                className={`flex items-center gap-1 ${
-                  isOverdue ? "text-danger" : ""
-                }`}
-              >
-                <Calendar
-                  className={`w-3 h-3 ${
-                    isOverdue ? "text-danger" : "text-gray-400"
-                  }`}
-                />
-                <span className="font-medium">Due:</span>
-                <span className={isOverdue ? "font-semibold" : ""}>
-                  {format(new Date(task.due_date), "MMM dd, HH:mm")}
+              {isOverdue && (
+                <span title="Overdue" className="text-red-700 flex-shrink-0">
+                  <AlertCircle className="w-4 h-4" />
                 </span>
-              </div>
-            )}
-          </div>
-
-          {/* Tags inline */}
-          {task.tags && task.tags.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <Tag className="w-3 h-3 text-accent" />
-              <div className="flex gap-1">
-                {task.tags.map((tag) => (
-                  <span
-                    key={tag.id}
-                    className="badge bg-accent bg-opacity-10 text-accent border border-accent border-opacity-30 text-xs px-1.5 py-0.5"
-                  >
-                    {tag.name}
-                  </span>
-                ))}
+              )}
+              <div className={`flex items-center gap-3 text-xs flex-shrink-0 ${getStatusTextColor(task.status)}`}>
+                {task.assignment_date && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 opacity-60" />
+                    <span className="font-medium">Created:</span>
+                    <span>{format(new Date(task.assignment_date), "dd/MM/yyyy")}</span>
+                  </div>
+                )}
+                {task.due_date && (
+                  <div
+                  className={`flex items-center gap-1 ${
+                    isOverdue ? "text-red-700" : ""
+                  }`}
+                >
+                  <Calendar
+                    className={`w-3 h-3 ${
+                      isOverdue ? "text-red-700" : "opacity-60"
+                    }`}
+                  />
+                    <span className="font-medium">Due:</span>
+                    <span className={isOverdue ? "font-semibold" : ""}>
+                      {format(new Date(task.due_date), "dd/MM/yyyy, HH:mm")}
+                    </span>
+                  </div>
+                )}
+                {task.tags && task.tags.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Tag className={`w-3 h-3 opacity-70 ${getStatusTagColor().icon}`} />
+                    <div className="flex gap-1">
+                      {task.tags.map((tag) => {
+                        const tagColors = getStatusTagColor();
+                        return (
+                          <span
+                            key={tag.id}
+                            className={`badge ${tagColors.bg} ${tagColors.text} border ${tagColors.border} border-opacity-30 text-xs px-1.5 py-0.5`}
+                          >
+                            {tag.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+            {/* Description below */}
+            {task.description && (
+              <p className={`text-xs mt-1 line-clamp-2 opacity-80 ${getStatusTextColor(task.status)}`}>
+                {task.description}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Action Buttons */}

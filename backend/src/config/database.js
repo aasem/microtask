@@ -194,6 +194,64 @@ function saveDatabase() {
   }
 }
 
+// Run migrations for existing databases
+function runMigrations() {
+  try {
+    // Migration: Update Subtasks table status constraint
+    // Check if Subtasks table exists and has old constraint
+    const subtasksCheck = db.exec(
+      `SELECT sql FROM sqlite_master WHERE type='table' AND name='Subtasks'`
+    );
+    
+    if (subtasksCheck.length > 0 && subtasksCheck[0].values.length > 0) {
+      const tableSql = subtasksCheck[0].values[0][0];
+      // Check if it has the old constraint
+      if (tableSql && tableSql.includes("'not_started', 'completed'")) {
+        console.log("🔄 Migrating Subtasks table to new status constraint...");
+        
+        // Create new table with correct constraint
+        db.run(`
+          CREATE TABLE Subtasks_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed', 'suspended')),
+            created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (task_id) REFERENCES Tasks(id) ON DELETE CASCADE
+          )
+        `);
+        
+        // Copy data, converting 'not_started' to 'in_progress'
+        db.run(`
+          INSERT INTO Subtasks_new (id, task_id, title, status, created_at)
+          SELECT id, task_id, title, 
+            CASE 
+              WHEN status = 'not_started' THEN 'in_progress'
+              ELSE status
+            END as status,
+            created_at
+          FROM Subtasks
+        `);
+        
+        // Drop old table
+        db.run(`DROP TABLE Subtasks`);
+        
+        // Rename new table
+        db.run(`ALTER TABLE Subtasks_new RENAME TO Subtasks`);
+        
+        // Recreate indexes
+        db.run(`CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON Subtasks(task_id)`);
+        
+        console.log("✅ Subtasks table migrated successfully!");
+        saveDatabase();
+      }
+    }
+  } catch (error) {
+    console.error("❌ Migration error:", error);
+    // Don't throw - allow the app to continue even if migration fails
+  }
+}
+
 // Initialize database schema
 function initializeSchema() {
   if (isInitialized) return;
@@ -206,7 +264,8 @@ function initializeSchema() {
   );
 
   if (tableCheck.length > 0 && tableCheck[0].values.length > 0) {
-    console.log("✅ Database schema already exists, skipping initialization.");
+    console.log("✅ Database schema already exists, running migrations...");
+    runMigrations();
     isInitialized = true;
     return;
   }
@@ -241,15 +300,13 @@ function initializeSchema() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       description TEXT,
-      priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('high', 'medium', 'low')),
       assigned_to_div INTEGER,
       assigned_to_div_user INTEGER,
       created_by INTEGER NOT NULL,
       assignment_date DATE NOT NULL DEFAULT (date('now')),
       due_date DATETIME,
-      status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'in_progress', 'completed', 'suspended')),
+      status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('not_started', 'in_progress', 'completed', 'suspended')),
       tags TEXT,
-      notes TEXT,
       FOREIGN KEY (assigned_to_div) REFERENCES Users(id) ON DELETE SET NULL,
       FOREIGN KEY (assigned_to_div_user) REFERENCES DivUsers(id) ON DELETE SET NULL,
       FOREIGN KEY (created_by) REFERENCES Users(id) ON DELETE NO ACTION
@@ -262,7 +319,7 @@ function initializeSchema() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       task_id INTEGER NOT NULL,
       title TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'not_started' CHECK (status IN ('not_started', 'completed')),
+      status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed', 'suspended')),
       created_at DATETIME NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (task_id) REFERENCES Tasks(id) ON DELETE CASCADE
     )
@@ -274,7 +331,7 @@ function initializeSchema() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       task_id INTEGER NOT NULL,
       changed_by INTEGER NOT NULL,
-      change_type TEXT NOT NULL CHECK (change_type IN ('status_change', 'assignment_change', 'tags_change', 'due_date_change', 'subtask_added', 'notes_updated', 'priority_change', 'task_created')),
+      change_type TEXT NOT NULL CHECK (change_type IN ('status_change', 'assignment_change', 'tags_change', 'due_date_change', 'subtask_added', 'task_created')),
       field_name TEXT,
       old_value TEXT,
       new_value TEXT,
@@ -368,6 +425,9 @@ function initializeSchema() {
   );
 
   console.log("✅ Database schema created successfully!");
+
+  // Run migrations (will be no-op for new databases)
+  runMigrations();
 
   // Save database after schema creation
   saveDatabase();

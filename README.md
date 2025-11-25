@@ -17,19 +17,17 @@ A comprehensive, role-based task management web application built with React, Ex
   - Track status (Not Started, In Progress, Completed, Blocked)
   - Add due dates and tags
   - Create subtasks
-  - Add notes and comments
   - **Task History Tracking**: View complete timeline of all changes made to a task
     - Status changes
     - Assignment changes
     - Tag modifications
     - Due date updates
     - New subtasks added
-    - Notes updates
 
 - **Dashboard & Analytics**
 
   - Real-time task summary (Total, In Progress, Completed, Overdue)
-  - Filter tasks by priority, status, and due date
+  - Filter tasks by status and due date
   - Visual task cards with overdue indicators
 
 - **User Management** (Admin only)
@@ -280,7 +278,6 @@ TaskTodoApp/
 | ------------- | ------------- | --------- |
 | Primary       | Deep Navy     | `#002B5B` |
 | Accent        | Teal          | `#1A936F` |
-| High Priority | Red/Orange    | `#F05454` |
 | Success       | Green         | `#3BB273` |
 | Background    | Light Grey    | `#F4F4F4` |
 | Text          | Dark Charcoal | `#222222` |
@@ -306,7 +303,7 @@ TaskTodoApp/
 ### User (Employee)
 
 - ✅ View tasks assigned to them
-- ✅ Update status and notes on their tasks
+- ✅ Update status on their tasks
 - ❌ Cannot view others' tasks
 - ❌ Cannot create or delete tasks
 

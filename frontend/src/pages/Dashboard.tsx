@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, RotateCcw, Search } from "lucide-react";
+import { Plus, RotateCcw, Search, Printer } from "lucide-react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import TaskCard from "../components/TaskCard";
@@ -29,7 +29,6 @@ const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filters, setFilters] = useState({
-    priority: [] as string[],
     status: "",
     dueDateRange: { start: "", end: "" },
     tags: [] as Tag[],
@@ -108,12 +107,313 @@ const Dashboard = () => {
 
   const handleResetFilters = () => {
     setFilters({
-      priority: [],
       status: "",
       dueDateRange: { start: "", end: "" },
       tags: [],
     });
     setSearchQuery("");
+  };
+
+  const handlePrint = () => {
+    if (filteredTasks.length === 0) {
+      setToast({ message: "No tasks to print", type: "info" });
+      return;
+    }
+
+    // Helper function to get status color
+    const getStatusColor = (status: string, isOverdue: boolean) => {
+      if (isOverdue && status !== "completed") {
+        return { bg: "#FEE2E2", text: "#B91C1C", border: "#B91C1C" };
+      }
+      switch (status) {
+        case "completed":
+          return { bg: "#D1FAE5", text: "#047857", border: "#047857" };
+        case "in_progress":
+          return { bg: "#DBEAFE", text: "#1E40AF", border: "#1E40AF" };
+        case "suspended":
+          return { bg: "#FEE2E2", text: "#B91C1C", border: "#B91C1C" };
+        default:
+          return { bg: "#DBEAFE", text: "#1E40AF", border: "#1E40AF" };
+      }
+    };
+
+    // Helper function to format date
+    const formatDate = (dateString: string | null | undefined) => {
+      if (!dateString) return "N/A";
+      try {
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        return `${day}/${month}/${year}, ${hours}:${minutes}`;
+      } catch {
+        return "N/A";
+      }
+    };
+
+    // Helper function to format assignment date
+    const formatDateOnly = (dateString: string | null | undefined) => {
+      if (!dateString) return "N/A";
+      try {
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      } catch {
+        return "N/A";
+      }
+    };
+
+    // Check if task is overdue
+    const isOverdue = (task: Task) => {
+      return (
+        task.due_date &&
+        new Date(task.due_date) < new Date() &&
+        task.status !== "completed"
+      );
+    };
+
+    // Generate print HTML
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Task List - ${new Date().toLocaleDateString()}</title>
+          <style>
+            @media print {
+              @page {
+                margin: 1cm;
+                size: landscape;
+              }
+              .no-print {
+                display: none;
+              }
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              font-size: 10px;
+              line-height: 1.4;
+              color: #1f2937;
+              margin: 0;
+              padding: 10px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 15px;
+              border-bottom: 2px solid #002B5B;
+              padding-bottom: 10px;
+            }
+            .header h1 {
+              color: #002B5B;
+              margin: 0;
+              font-size: 18px;
+              font-weight: bold;
+            }
+            .header p {
+              color: #6b7280;
+              margin: 4px 0 0 0;
+              font-size: 10px;
+            }
+            .summary {
+              margin-bottom: 15px;
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 8px;
+              padding: 10px;
+              background: #f9fafb;
+              border-radius: 4px;
+            }
+            .summary-item {
+              text-align: center;
+            }
+            .summary-label {
+              font-size: 9px;
+              color: #6b7280;
+              margin-bottom: 2px;
+            }
+            .summary-value {
+              font-size: 16px;
+              font-weight: bold;
+              color: #1f2937;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 9px;
+            }
+            thead {
+              background: #002B5B;
+              color: white;
+            }
+            th {
+              padding: 6px 4px;
+              text-align: left;
+              font-weight: bold;
+              font-size: 9px;
+              border: 1px solid #002B5B;
+            }
+            td {
+              padding: 6px 4px;
+              border: 1px solid #e5e7eb;
+              vertical-align: top;
+            }
+            tbody tr {
+              page-break-inside: avoid;
+            }
+            tbody tr:nth-child(even) {
+              background: #f9fafb;
+            }
+            .status-dot {
+              width: 8px;
+              height: 8px;
+              border-radius: 50%;
+              display: inline-block;
+              margin-right: 4px;
+              vertical-align: middle;
+            }
+            .task-title {
+              font-weight: 600;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              max-width: 150px;
+            }
+            .task-description {
+              font-size: 8px;
+              color: #6b7280;
+              max-width: 120px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .tags {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 2px;
+            }
+            .tag {
+              padding: 2px 6px;
+              border-radius: 8px;
+              font-size: 8px;
+              font-weight: 500;
+              border: 1px solid;
+              white-space: nowrap;
+            }
+            .footer {
+              margin-top: 20px;
+              padding-top: 10px;
+              border-top: 1px solid #e5e7eb;
+              text-align: center;
+              color: #6b7280;
+              font-size: 9px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Task Management Report</h1>
+            <p>Generated on ${new Date().toLocaleString()}</p>
+            ${hasActiveFilters ? `<p style="color: #dc2626; font-weight: 600;">Filtered View - Showing ${filteredTasks.length} of ${tasks.length} tasks</p>` : `<p>Total Tasks: ${filteredTasks.length}</p>`}
+          </div>
+
+          ${summary ? `
+          <div class="summary">
+            <div class="summary-item">
+              <div class="summary-label">Total</div>
+              <div class="summary-value" style="color: #4b5563;">${summary.total || 0}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">In Progress</div>
+              <div class="summary-value" style="color: #1E40AF;">${summary.in_progress || 0}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Completed</div>
+              <div class="summary-value" style="color: #047857;">${summary.completed || 0}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Overdue</div>
+              <div class="summary-value" style="color: #B91C1C;">${summary.overdue || 0}</div>
+            </div>
+          </div>
+          ` : ""}
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 20px;"></th>
+                <th style="width: 180px;">Title</th>
+                <th style="width: 120px;">Description</th>
+                <th style="width: 80px;">Status</th>
+                <th style="width: 80px;">Created</th>
+                <th style="width: 100px;">Due Date</th>
+                <th style="width: 100px;">Division</th>
+                <th style="width: 100px;">Assigned To</th>
+                <th style="width: 120px;">Tags</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTasks.map((task) => {
+                const overdue = isOverdue(task);
+                const colors = getStatusColor(task.status, overdue);
+                const statusText = task.status === "suspended" ? "OVERDUE" : task.status === "in_progress" ? "IN PROGRESS" : task.status.toUpperCase();
+                
+                return `
+                  <tr style="background: ${colors.bg};">
+                    <td>
+                      <span class="status-dot" style="background: ${colors.border};"></span>
+                    </td>
+                    <td>
+                      <div class="task-title" style="color: ${colors.text}; font-weight: 600;">
+                        ${task.title}
+                      </div>
+                    </td>
+                    <td>
+                      ${task.description ? `<div class="task-description" style="color: ${colors.text}; opacity: 0.8;">${task.description}</div>` : "-"}
+                    </td>
+                    <td style="color: ${colors.text}; font-weight: 600;">${statusText}</td>
+                    <td style="color: ${colors.text};">${formatDateOnly(task.assignment_date)}</td>
+                    <td style="color: ${colors.text}; ${overdue ? "font-weight: 600;" : ""}">${task.due_date ? formatDate(task.due_date) : "-"}</td>
+                    <td style="color: ${colors.text};">${task.assigned_to_div_name || "-"}</td>
+                    <td style="color: ${colors.text};">${task.assigned_to_div_user_name || "-"}</td>
+                    <td>
+                      ${task.tags && task.tags.length > 0 ? `
+                        <div class="tags">
+                          ${task.tags.map(tag => `
+                            <span class="tag" style="background: ${colors.bg}; color: ${colors.text}; border-color: ${colors.border};">
+                              ${tag.name}
+                            </span>
+                          `).join("")}
+                        </div>
+                      ` : "-"}
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <p>End of Report - Task Management System</p>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    // Open print window
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+    }
   };
 
   // Filter tasks
@@ -123,22 +423,13 @@ const Dashboard = () => {
       const query = searchQuery.toLowerCase();
       const matchesTitle = task.title.toLowerCase().includes(query);
       const matchesDescription = task.description?.toLowerCase().includes(query);
-      const matchesNotes = task.notes?.toLowerCase().includes(query);
       const matchesTags = task.tags?.some(tag => 
         tag.name.toLowerCase().includes(query)
       );
       
-      if (!matchesTitle && !matchesDescription && !matchesNotes && !matchesTags) {
+      if (!matchesTitle && !matchesDescription && !matchesTags) {
         return false;
       }
-    }
-
-    // Priority filter
-    if (
-      filters.priority.length > 0 &&
-      !filters.priority.includes(task.priority)
-    ) {
-      return false;
     }
 
     // Status filter
@@ -174,7 +465,6 @@ const Dashboard = () => {
 
   // Check if any filters are active
   const hasActiveFilters =
-    filters.priority.length > 0 ||
     filters.status !== "" ||
     filters.dueDateRange.start ||
     filters.dueDateRange.end ||
@@ -219,6 +509,16 @@ const Dashboard = () => {
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
+                {filteredTasks.length > 0 && (
+                  <button
+                    onClick={handlePrint}
+                    className="btn-secondary flex items-center space-x-2"
+                    title="Print tasks"
+                  >
+                    <Printer className="w-5 h-5" />
+                    <span>Print</span>
+                  </button>
+                )}
                 {hasActiveFilters && (
                   <button
                     onClick={handleResetFilters}

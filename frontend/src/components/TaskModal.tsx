@@ -33,7 +33,7 @@ interface User {
   email: string;
 }
 
-type TaskStatus = "not_started" | "in_progress" | "completed" | "suspended";
+type TaskStatus = "in_progress" | "completed";
 type TaskFormData = Omit<Partial<Task>, "status"> & { status?: TaskStatus };
 
 const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
@@ -41,13 +41,11 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
   const [formData, setFormData] = useState<TaskFormData>({
     title: "",
     description: "",
-    priority: "medium",
     assigned_to_div: undefined,
     assigned_to_div_user: undefined,
     due_date: "",
-    status: "not_started",
+    status: "in_progress",
     tags: [],
-    notes: "",
   });
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -111,13 +109,11 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
       setFormData({
         title: task.title,
         description: task.description,
-        priority: task.priority,
         assigned_to_div: task.assigned_to_div,
         assigned_to_div_user: task.assigned_to_div_user,
         due_date: formatDateForInput(task.due_date),
-        status: task.status,
+        status: task.status === "suspended" ? "in_progress" : task.status,
         tags: task.tags || [],
-        notes: task.notes,
       });
       setSubtasks(task.subtasks || []);
       setTaskFiles(task.files || []);
@@ -126,13 +122,11 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
       setFormData({
         title: "",
         description: "",
-        priority: "medium",
         assigned_to_div: undefined,
         assigned_to_div_user: undefined,
         due_date: "",
-        status: "not_started",
+        status: "in_progress",
         tags: [],
-        notes: "",
       });
       setSubtasks([]);
       setTaskFiles([]);
@@ -175,7 +169,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
   };
 
   const handleAddSubtask = () => {
-    setSubtasks((prev) => [...prev, { title: "", status: "not_started" }]);
+    setSubtasks((prev) => [...prev, { title: "", status: "in_progress" }]);
   };
 
   const handleRemoveSubtask = (index: number) => {
@@ -514,9 +508,8 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
             </div>
           </div>
 
-          {/* Assignment & Priority */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column */}
+          {/* Assignment */}
+          <div className="grid grid-cols-1 gap-6">
             <div>
               <h3 className="text-md font-semibold mb-3 flex items-center gap-2 text-gray-700">
                 <User className="w-4 h-4 text-accent" />
@@ -590,17 +583,15 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
             <div>
               <h3 className="text-md font-semibold mb-3 flex items-center gap-2 text-gray-700">
                 <AlertCircle className="w-4 h-4 text-accent" />
-                Status & Priority
+                Status
               </h3>
               <div className="space-y-4 bg-white p-4 rounded-lg border border-gray-200">
                 <div className="form-group">
                   <label className="form-label">Status</label>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      "not_started",
                       "in_progress",
                       "completed",
-                      "suspended",
                     ].map(
                       (status) => (
                         <div
@@ -609,10 +600,8 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                             setFormData({
                               ...formData,
                               status: status as
-                                | "not_started"
                                 | "in_progress"
-                                | "completed"
-                                | "suspended",
+                                | "completed",
                             })
                           }
                           className={`p-2 border rounded cursor-pointer flex items-center gap-2 transition-colors ${
@@ -625,11 +614,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                             className={`status-dot ${
                               status === "completed"
                                 ? "status-completed"
-                                : status === "in_progress"
-                                ? "status-in-progress"
-                              : status === "suspended"
-                              ? "status-suspended"
-                                : "status-not-started"
+                                : "status-in-progress"
                             }`}
                           ></span>
                           <span className="text-sm">
@@ -642,44 +627,6 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                     )}
                   </div>
                   <input type="hidden" name="status" value={formData.status} />
-                </div>
-
-                <div className="form-group mb-0">
-                  <label className="form-label">Priority</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["low", "medium", "high"].map((priority) => (
-                      <div
-                        key={priority}
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            priority: priority as "high" | "medium" | "low",
-                          })
-                        }
-                        className={`p-2 border rounded cursor-pointer flex justify-center items-center gap-1 transition-colors ${
-                          formData.priority === priority
-                            ? "border-accent bg-accent bg-opacity-5"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            priority === "high"
-                              ? "bg-danger"
-                              : priority === "medium"
-                              ? "bg-yellow-500"
-                              : "bg-green-500"
-                          }`}
-                        ></span>
-                        <span className="text-sm capitalize">{priority}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <input
-                    type="hidden"
-                    name="priority"
-                    value={formData.priority}
-                  />
                 </div>
               </div>
             </div>
@@ -746,12 +693,12 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                             handleSubtaskChange(
                               index,
                               "status",
-                              e.target.value as "not_started" | "completed"
+                              e.target.value as "in_progress" | "completed"
                             )
                           }
                           className="border-0 py-1 pl-2 pr-7 rounded text-sm bg-gray-50"
                         >
-                          <option value="not_started">Not Started</option>
+                          <option value="in_progress">In Progress</option>
                           <option value="completed">Completed</option>
                         </select>
                         <button
@@ -885,22 +832,6 @@ const TaskModal = ({ task, isOpen, onClose, onSave }: TaskModalProps) => {
                 No files attached yet
               </p>
             )}
-          </div>
-
-          {/* Notes */}
-          <div className="form-group">
-            <label className="form-label flex items-center gap-2">
-              <FileText className="w-4 h-4 text-accent" />
-              Notes
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes || ""}
-              onChange={handleChange}
-              rows={4}
-              className="w-full"
-              placeholder="Add any additional notes or comments"
-            />
           </div>
 
           {/* Actions */}

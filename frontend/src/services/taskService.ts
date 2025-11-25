@@ -9,7 +9,6 @@ export interface Task {
   id: number;
   title: string;
   description?: string;
-  priority: "high" | "medium" | "low";
   assigned_to_div?: number;
   assigned_to_div_name?: string;
   assigned_to_div_email?: string;
@@ -19,9 +18,8 @@ export interface Task {
   created_by_name?: string;
   assignment_date: string;
   due_date?: string;
-  status: "not_started" | "in_progress" | "completed" | "suspended";
+  status: "in_progress" | "completed" | "suspended";
   tags?: Tag[];
-  notes?: string;
   subtasks?: Subtask[];
   files?: FileAttachment[];
 }
@@ -40,7 +38,7 @@ export interface Subtask {
   id?: number;
   task_id?: number;
   title: string;
-  status: "not_started" | "completed";
+  status: "in_progress" | "completed" | "suspended";
   files?: FileAttachment[];
 }
 

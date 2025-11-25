@@ -95,19 +95,6 @@ const TaskView = () => {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-800 border-red-300";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "low":
-        return "bg-green-100 text-green-800 border-green-300";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
@@ -115,9 +102,22 @@ const TaskView = () => {
       case "in_progress":
         return "bg-blue-100 text-blue-800 border-blue-300";
       case "suspended":
-        return "bg-red-100 text-red-800 border-red-300";
+        return "bg-red-50 text-red-700 border-red-700";
       default:
         return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+  };
+
+  const getStatusTabBg = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-50";
+      case "in_progress":
+        return "bg-blue-50";
+      case "suspended":
+        return "bg-red-50";
+      default:
+        return "bg-gray-50";
     }
   };
 
@@ -133,8 +133,6 @@ const TaskView = () => {
         return <Calendar className="w-4 h-4" />;
       case "subtask_added":
         return <CheckCircle2 className="w-4 h-4" />;
-      case "notes_updated":
-        return <FileText className="w-4 h-4" />;
       case "task_created":
         return <Clock className="w-4 h-4" />;
       default:
@@ -158,7 +156,7 @@ const TaskView = () => {
 
   if (error || !task) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+      <div className="bg-red-50 border border-red-700 text-red-700 px-4 py-3 rounded">
         {error || "Task not found"}
       </div>
     );
@@ -194,13 +192,11 @@ const TaskView = () => {
         {/* Status Indicator Bar */}
         <div
           className={`h-1.5 ${
-            task.status === "completed"
+                  task.status === "completed"
               ? "bg-green-500"
               : task.status === "in_progress"
               ? "bg-blue-500"
-              : task.status === "suspended"
-              ? "bg-red-500"
-              : "bg-gray-400"
+              : "bg-red-700"
           }`}
         />
 
@@ -214,25 +210,27 @@ const TaskView = () => {
                     ? "status-completed"
                     : task.status === "in_progress"
                     ? "status-in-progress"
-                    : task.status === "suspended"
-                    ? "status-suspended"
-                    : "status-not-started"
+                    : "status-suspended"
                 }`}
               />
-              <h1 className="text-xl font-bold text-gray-900 leading-tight">
-                {task.title}
-              </h1>
+              <div className="flex-1">
+                <h1 className="text-xl font-bold leading-tight text-gray-900">
+                  {task.title}
+                </h1>
+                {task.description && (
+                  <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                    {task.description}
+                  </p>
+                )}
+              </div>
             </div>
 
-            {/* Priority and Status Badges */}
+            {/* Status Badge */}
             <div className="flex items-center gap-2 flex-wrap mb-4">
-              <span
-                className={`badge ${getPriorityColor(task.priority)} border`}
-              >
-                {task.priority.toUpperCase()}
-              </span>
               <span className={`badge ${getStatusColor(task.status)} border`}>
-                {task.status.replace("_", " ").toUpperCase()}
+                {task.status === "suspended"
+                  ? "OVERDUE"
+                  : task.status.replace("_", " ").toUpperCase()}
               </span>
               {task.tags &&
                 task.tags.length > 0 &&
@@ -256,10 +254,10 @@ const TaskView = () => {
                   <Building2 className="w-5 h-5 text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-500 mb-1">
+                  <p className="text-xs font-medium mb-1 text-gray-500">
                     Division
                   </p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
+                  <p className="text-sm font-semibold truncate text-gray-900">
                     {task.assigned_to_div_name}
                   </p>
                   {task.assigned_to_div_email && (
@@ -277,10 +275,10 @@ const TaskView = () => {
                   <User className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-500 mb-1">
+                  <p className="text-xs font-medium mb-1 text-gray-500">
                     Assigned User
                   </p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
+                  <p className="text-sm font-semibold truncate text-gray-900">
                     {task.assigned_to_div_user_name}
                   </p>
                 </div>
@@ -293,7 +291,7 @@ const TaskView = () => {
                   <Calendar className="w-5 h-5 text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-500 mb-1">
+                  <p className="text-xs font-medium mb-1 text-gray-500">
                     Due Date
                   </p>
                   <p className="text-sm font-semibold text-gray-900">
@@ -310,13 +308,13 @@ const TaskView = () => {
               <div className="p-2 rounded-lg bg-gray-200">
                 <Clock className="w-5 h-5 text-gray-600" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-500 mb-1">
-                  Created
-                </p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {format(new Date(task.assignment_date), "MMM dd, yyyy")}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium mb-1 text-gray-500">
+                    Created
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {format(new Date(task.assignment_date), "MMM dd, yyyy")}
+                  </p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   by {task.created_by_name || "Unknown"}
                 </p>
@@ -328,34 +326,42 @@ const TaskView = () => {
 
       {/* Tab Navigation */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-200 bg-gray-50">
+        <div className={`border-b border-gray-200 ${getStatusTabBg(task.status)}`}>
           <div className="flex">
             <button
               onClick={() => setActiveTab("details")}
               className={`px-5 py-3 font-semibold text-sm transition-all relative flex items-center gap-2 ${
                 activeTab === "details"
-                  ? "text-primary bg-white"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  ? "text-gray-900 bg-white font-bold"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-white hover:bg-opacity-50"
               }`}
             >
               <FileText className="w-4 h-4" />
               Task Details
               {activeTab === "details" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+                <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                  task.status === "completed" ? "bg-green-700" :
+                  task.status === "in_progress" ? "bg-blue-700" :
+                  task.status === "suspended" ? "bg-red-700" : "bg-primary"
+                }`}></div>
               )}
             </button>
             <button
               onClick={() => setActiveTab("history")}
               className={`px-5 py-3 font-semibold text-sm transition-all relative flex items-center gap-2 ${
                 activeTab === "history"
-                  ? "text-primary bg-white"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  ? "text-gray-900 bg-white font-bold"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-white hover:bg-opacity-50"
               }`}
             >
               <HistoryIcon className="w-4 h-4" />
               History
               {activeTab === "history" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+                <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                  task.status === "completed" ? "bg-green-700" :
+                  task.status === "in_progress" ? "bg-blue-700" :
+                  task.status === "suspended" ? "bg-red-700" : "bg-primary"
+                }`}></div>
               )}
               <span
                 className={`ml-1.5 text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -374,9 +380,8 @@ const TaskView = () => {
         <div className="p-6">
           {activeTab === "details" ? (
             <div className="space-y-4">
-              {/* Description and Notes in Same Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Description Section */}
+              {/* Description Section */}
+              <div className="grid grid-cols-1 gap-4">
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="p-1.5 rounded-lg bg-accent bg-opacity-10">
@@ -401,22 +406,6 @@ const TaskView = () => {
                   )}
                 </div>
 
-                {/* Notes Section */}
-                {task.notes ? (
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="p-1.5 rounded-lg bg-primary bg-opacity-10">
-                        <FileText className="w-4 h-4 text-primary" />
-                      </div>
-                      <h3 className="text-sm font-bold text-gray-900">Notes</h3>
-                    </div>
-                    <div className="pl-8">
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                        {task.notes}
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
               </div>
 
               {/* Main Content Grid */}
@@ -451,7 +440,7 @@ const TaskView = () => {
                                   <FileText className="w-4 h-4 text-gray-400" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-gray-900 truncate">
+                                  <p className="text-sm font-semibold truncate text-gray-900">
                                     {file.original_filename}
                                   </p>
                                   <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
@@ -677,9 +666,9 @@ const TaskView = () => {
                           {item.old_value && item.new_value && (
                             <div className="mt-4 pt-4 border-t border-gray-200">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+                                <div className="p-3 rounded-lg bg-red-50 border border-red-700">
                                   <div className="flex items-center gap-2 mb-2">
-                                    <span className="w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+                                    <span className="w-2.5 h-2.5 bg-red-700 rounded-full"></span>
                                     <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">
                                       Previous
                                     </p>

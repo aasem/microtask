@@ -13,7 +13,6 @@ import { Tag as TagType } from "../services/tagService";
 
 interface SidebarProps {
   filters: {
-    priority: string[];
     status: string;
     dueDateRange: { start: string; end: string };
     tags: TagType[];
@@ -25,18 +24,10 @@ interface SidebarProps {
 const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const hasActiveFilters =
-    filters.priority.length > 0 ||
     filters.status !== "" ||
     filters.dueDateRange.start ||
     filters.dueDateRange.end ||
     filters.tags.length > 0;
-
-  const handlePriorityChange = (priority: string) => {
-    const newPriorities = filters.priority.includes(priority)
-      ? filters.priority.filter((p) => p !== priority)
-      : [...filters.priority, priority];
-    onFilterChange({ ...filters, priority: newPriorities });
-  };
 
   const handleStatusChange = (status: string) => {
     onFilterChange({
@@ -62,24 +53,10 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
 
   const clearFilters = () => {
     onFilterChange({
-      priority: [],
       status: "",
       dueDateRange: { start: "", end: "" },
       tags: [],
     });
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "text-red-600 border-red-200 bg-red-50";
-      case "medium":
-        return "text-yellow-600 border-yellow-200 bg-yellow-50";
-      case "low":
-        return "text-green-600 border-green-200 bg-green-50";
-      default:
-        return "text-gray-600 border-gray-200 bg-gray-50";
-    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -89,7 +66,7 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
       case "in_progress":
         return <Clock className="w-3.5 h-3.5 text-blue-500" />;
       case "suspended":
-        return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
+        return <AlertCircle className="w-3.5 h-3.5 text-red-700" />;
       default:
         return <Clock className="w-3.5 h-3.5 text-gray-500" />;
     }
@@ -110,7 +87,7 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
             <h3 className="font-semibold text-gray-900">Filters</h3>
             {hasActiveFilters && (
               <span className="bg-accent text-white text-xs px-1.5 py-0.5 rounded-full ml-1">
-                {(filters.priority.length > 0 ? 1 : 0) +
+                {0 +
                   (filters.status ? 1 : 0) +
                   (filters.dueDateRange.start || filters.dueDateRange.end
                     ? 1
@@ -141,38 +118,6 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
 
       {isOpen && (
         <div className="p-4 space-y-6">
-          {/* Priority Filter */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-              <Tag className="w-3.5 h-3.5 text-accent" />
-              Priority
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {["high", "medium", "low"].map((priority) => (
-                <button
-                  key={priority}
-                  onClick={() => handlePriorityChange(priority)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex items-center gap-1 ${
-                    filters.priority.includes(priority)
-                      ? getPriorityColor(priority)
-                      : "border-gray-200 hover:border-gray-300 text-gray-600"
-                  }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      priority === "high"
-                        ? "bg-red-500"
-                        : priority === "medium"
-                        ? "bg-yellow-500"
-                        : "bg-green-500"
-                    }`}
-                  ></span>
-                  <span className="capitalize">{priority}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Status Filter */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
@@ -180,22 +125,24 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
               Status
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {["not_started", "in_progress", "completed", "suspended"].map(
+              {["in_progress", "completed"].map(
                 (status) => (
                   <button
                     key={status}
                     onClick={() => handleStatusChange(status)}
                     className={`px-2 py-1.5 rounded border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
                       filters.status === status
-                        ? "bg-primary bg-opacity-5 border-primary text-primary"
-                        : "border-gray-200 hover:border-gray-300 text-gray-600"
+                        ? status === "in_progress"
+                          ? "bg-blue-50 border-blue-700 text-blue-700 font-bold"
+                          : "bg-green-50 border-green-700 text-green-700 font-bold"
+                        : status === "in_progress"
+                        ? "border-blue-200 hover:border-blue-300 text-blue-600"
+                        : "border-green-200 hover:border-green-300 text-green-600"
                     }`}
                   >
                     {getStatusIcon(status)}
                     <span>
-                      {status === "not_started"
-                        ? "Not Started"
-                        : status === "in_progress"
+                      {status === "in_progress"
                         ? "In Progress"
                         : status.charAt(0).toUpperCase() + status.slice(1)}
                     </span>
@@ -213,7 +160,7 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
             </label>
             <div className="space-y-3">
               <div>
-                <p className="text-xs text-gray-500 mb-1.5">From</p>
+                <p className="text-xs text-gray-500 mb-1.5">From (DD/MM/YYYY)</p>
                 <input
                   type="date"
                   value={filters.dueDateRange.start}
@@ -222,7 +169,7 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
                 />
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1.5">To</p>
+                <p className="text-xs text-gray-500 mb-1.5">To (DD/MM/YYYY)</p>
                 <input
                   type="date"
                   value={filters.dueDateRange.end}
@@ -302,9 +249,6 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
       {/* Mini Indicators when collapsed */}
       {!isOpen && hasActiveFilters && (
         <div className="p-2">
-          {filters.priority.length > 0 && (
-            <div className="h-2 w-2 bg-accent rounded-full mx-auto mb-2"></div>
-          )}
           {filters.status && (
             <div className="h-2 w-2 bg-primary rounded-full mx-auto mb-2"></div>
           )}

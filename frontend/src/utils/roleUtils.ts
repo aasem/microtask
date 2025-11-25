@@ -34,19 +34,6 @@ export const getRoleBadgeColor = (role: string): string => {
   }
 };
 
-export const getPriorityColor = (priority: string): string => {
-  switch (priority) {
-    case 'high':
-      return 'badge-high';
-    case 'medium':
-      return 'badge-medium';
-    case 'low':
-      return 'badge-low';
-    default:
-      return 'badge-medium';
-  }
-};
-
 export const getStatusColor = (status: string): string => {
   switch (status) {
     case 'completed':

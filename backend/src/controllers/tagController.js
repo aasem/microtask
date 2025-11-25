@@ -50,16 +50,23 @@ const createTag = async (req, res) => {
     }
 
     // Create new tag
-    const result = await pool.request()
+    const insertResult = await pool.request()
       .input('name', sql.VarChar, trimmedName)
       .query(`
         INSERT INTO Tags (name)
         VALUES (@name);
-        SELECT id, name, created_at FROM Tags WHERE id = SCOPE_IDENTITY();
+        SELECT SCOPE_IDENTITY() AS id;
       `);
 
+    const tagId = insertResult.recordset[0].id;
+
+    // Fetch the complete tag record
+    const tagResult = await pool.request()
+      .input('id', sql.Int, tagId)
+      .query('SELECT id, name, created_at FROM Tags WHERE id = @id');
+
     res.status(201).json({
-      tag: result.recordset[0],
+      tag: tagResult.recordset[0],
       message: 'Tag created successfully'
     });
   } catch (error) {

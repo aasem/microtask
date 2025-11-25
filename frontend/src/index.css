@@ -74,7 +74,7 @@
   }
 
   .badge-high {
-    @apply bg-red-50 text-red-700 border border-red-200;
+    @apply bg-red-50 text-red-700 border border-red-700;
   }
 
   .badge-medium {
@@ -153,7 +153,7 @@
   }
 
 .status-suspended {
-    @apply bg-red-500;
+    @apply bg-red-700;
   }
 
   /* Box shadow utilities */

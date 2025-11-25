@@ -43,15 +43,13 @@ Main task records.
 | id                   | INTEGER  | PRIMARY KEY AUTOINCREMENT      | Unique task identifier                                  |
 | title                | TEXT     | NOT NULL                       | Task title                                              |
 | description          | TEXT     | NULL                           | Detailed task description                               |
-| priority             | TEXT     | NOT NULL DEFAULT 'medium'      | Priority: high, medium, or low                          |
 | assigned_to_div      | INTEGER  | NULL                           | Assigned division (User)                                |
 | assigned_to_div_user | INTEGER  | NULL                           | Assigned division user (DivUser)                        |
 | created_by           | INTEGER  | NOT NULL                       | User who created the task                               |
 | assignment_date      | DATE     | NOT NULL DEFAULT now           | Date task was assigned                                  |
 | due_date             | DATETIME | NULL                           | Task deadline                                           |
-| status               | TEXT     | NOT NULL DEFAULT 'not_started' | Status: not_started, in_progress, completed, or suspended |
+| status               | TEXT     | NOT NULL DEFAULT 'in_progress' | Status: in_progress, completed, or suspended (overdue) |
 | tags                 | TEXT     | NULL                           | Legacy tags column (kept for compatibility)             |
-| notes                | TEXT     | NULL                           | Additional task notes                                   |
 
 **Foreign Keys:**
 
@@ -68,7 +66,7 @@ Sub-items of tasks for breaking down work.
 | id         | INTEGER  | PRIMARY KEY AUTOINCREMENT      | Unique subtask identifier        |
 | task_id    | INTEGER  | NOT NULL                       | Parent task reference            |
 | title      | TEXT     | NOT NULL                       | Subtask title                    |
-| status     | TEXT     | NOT NULL DEFAULT 'not_started' | Status: not_started or completed |
+| status     | TEXT     | NOT NULL DEFAULT 'in_progress' | Status: in_progress, completed, or suspended |
 | created_at | DATETIME | NOT NULL DEFAULT now           | Creation timestamp               |
 
 **Foreign Keys:**
@@ -98,8 +96,6 @@ Audit log of task changes.
 - tags_change
 - due_date_change
 - subtask_added
-- notes_updated
-- priority_change
 - task_created
 
 **Foreign Keys:**
