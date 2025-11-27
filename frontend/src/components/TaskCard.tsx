@@ -132,35 +132,35 @@ const TaskCard = ({
 
   return (
     <div
-      className={`card custom-card shadow-card hover:border-gray-300 cursor-pointer py-3 border-l-4 ${getStatusCardColor()} pl-4`}
+      className={`card custom-card shadow-card hover:border-gray-300 cursor-pointer py-1.5 pl-2.5 pr-2 border-l-4 ${getStatusCardColor()}`}
       onClick={handleCardClick}
     >
       {/* Task Content Layout */}
-      <div className="flex justify-between items-start gap-4">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
+      <div className="flex justify-between items-start gap-2">
+        <div className="flex items-start gap-2 flex-1 min-w-0">
           {/* Status Dot */}
           <span
-            className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor()} flex-shrink-0 mt-1`}
+            className={`w-2 h-2 rounded-full ${getStatusDotColor()} flex-shrink-0 mt-1.5`}
           />
           
           {/* Two Column Grid Layout */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 flex-1 min-w-0">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 flex-1 min-w-0">
             {/* Column 1, Row 1: Title */}
-            <div className="flex items-start gap-2 flex-wrap">
-              <h3 className={`text-lg font-bold ${getStatusTextColor(task.status)} break-words flex-1 min-w-0`}>
+            <div className="flex items-start gap-1.5 flex-wrap">
+              <h3 className={`text-base font-bold ${getStatusTextColor(task.status)} break-words flex-1 min-w-0 leading-tight`}>
                 {task.title}
               </h3>
               {isOverdue && (
                 <span title="Overdue" className="text-red-700 flex-shrink-0 mt-0.5">
-                  <AlertCircle className="w-4 h-4" />
+                  <AlertCircle className="w-3.5 h-3.5" />
                 </span>
               )}
             </div>
 
             {/* Column 2, Row 1: Tasked On and Due */}
-            <div className={`flex items-center gap-3 text-xs ${getStatusTextColor(task.status)} flex-wrap`}>
+            <div className={`flex items-center gap-2 text-xs ${getStatusTextColor(task.status)} flex-wrap`}>
               {task.assignment_date && (
-                <div className="flex items-center gap-1.5 min-w-0">
+                <div className="flex items-center gap-1 min-w-0">
                   <Clock className="w-3 h-3 opacity-60 flex-shrink-0" />
                   <span className="font-medium flex-shrink-0">Tasked On:</span>
                   <span className="truncate">{format(new Date(task.assignment_date), "dd/MM/yyyy")}</span>
@@ -168,7 +168,7 @@ const TaskCard = ({
               )}
               {task.due_date && (
                 <div
-                  className={`flex items-center gap-1.5 min-w-0 ${
+                  className={`flex items-center gap-1 min-w-0 ${
                     isOverdue ? "text-red-700" : ""
                   }`}
                 >
@@ -188,31 +188,31 @@ const TaskCard = ({
             {/* Column 1, Row 2: Description */}
             <div>
               {task.description && (
-                <p className={`text-xs break-words line-clamp-3 opacity-80 ${getStatusTextColor(task.status)}`}>
+                <p className={`text-xs break-words line-clamp-2 opacity-80 ${getStatusTextColor(task.status)} leading-tight`}>
                   {task.description}
                 </p>
               )}
             </div>
 
             {/* Column 2, Row 2: Assign To and Tags */}
-            <div className={`flex items-center gap-3 text-xs ${getStatusTextColor(task.status)} flex-wrap`}>
+            <div className={`flex items-center gap-2 text-xs ${getStatusTextColor(task.status)} flex-wrap`}>
               {task.assigned_to_div_name && (
-                <div className="flex items-center gap-1.5 min-w-0">
+                <div className="flex items-center gap-1 min-w-0">
                   <User className="w-3 h-3 opacity-60 flex-shrink-0" />
                   <span className="font-medium flex-shrink-0">Assign To:</span>
                   <span className="truncate">{task.assigned_to_div_name}</span>
                 </div>
               )}
               {task.tags && task.tags.length > 0 && (
-                <div className="flex items-center gap-1.5 min-w-0">
+                <div className="flex items-center gap-1 min-w-0">
                   <Tag className={`w-3 h-3 opacity-70 flex-shrink-0 ${getStatusTagColor().icon}`} />
-                  <div className="flex gap-1 flex-wrap min-w-0">
+                  <div className="flex gap-0.5 flex-wrap min-w-0">
                     {task.tags.map((tag) => {
                       const tagColors = getStatusTagColor();
                       return (
                         <span
                           key={tag.id}
-                          className={`badge ${tagColors.bg} ${tagColors.text} border ${tagColors.border} border-opacity-30 text-xs px-1.5 py-0.5 flex-shrink-0`}
+                          className={`badge ${tagColors.bg} ${tagColors.text} border ${tagColors.border} border-opacity-30 text-xs px-1 py-0 flex-shrink-0`}
                         >
                           {tag.name}
                         </span>
@@ -226,14 +226,14 @@ const TaskCard = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex gap-0.5 flex-shrink-0">
           {canEdit && (
             <button
               onClick={() => onEdit(task)}
               className="icon-wrapper icon-accent rounded-md"
               title="Edit task"
             >
-              <Edit className="w-4 h-4" />
+              <Edit className="w-3.5 h-3.5" />
             </button>
           )}
           {canDelete && (
@@ -242,7 +242,7 @@ const TaskCard = ({
               className="icon-wrapper icon-danger rounded-md"
               title="Delete task"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
