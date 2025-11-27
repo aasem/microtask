@@ -108,7 +108,7 @@ const UserManagement = () => {
                 }`}
               >
                 <Users className="w-5 h-5 inline mr-2" />
-                Login Users
+                Divisions (Login Possible)
               </button>
               <button
                 onClick={() => setActiveTab('divusers')}
@@ -119,7 +119,7 @@ const UserManagement = () => {
                 }`}
               >
                 <Users className="w-5 h-5 inline mr-2" />
-                DivUsers (Non-Login)
+                DDG/ADDG (Non-Login)
               </button>
             </nav>
           </div>
@@ -129,7 +129,7 @@ const UserManagement = () => {
         {activeTab === 'users' ? (
           <>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Login Users</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Users (Admin + Divisions)</h2>
               <button onClick={handleCreate} className="btn-primary flex items-center space-x-2">
                 <Plus className="w-5 h-5" />
                 <span>Add User</span>

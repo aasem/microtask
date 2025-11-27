@@ -8,26 +8,35 @@ import {
   Tag,
   CheckCircle2,
   Clock,
+  User,
 } from "lucide-react";
 import { Tag as TagType } from "../services/tagService";
+
+interface Division {
+  id: number;
+  name: string;
+}
 
 interface SidebarProps {
   filters: {
     status: string;
     dueDateRange: { start: string; end: string };
     tags: TagType[];
+    assignedToDiv: number | null;
   };
   onFilterChange: (filters: any) => void;
   availableTags: TagType[];
+  availableDivisions: Division[];
 }
 
-const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
+const Sidebar = ({ filters, onFilterChange, availableTags, availableDivisions }: SidebarProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const hasActiveFilters =
     filters.status !== "" ||
     filters.dueDateRange.start ||
     filters.dueDateRange.end ||
-    filters.tags.length > 0;
+    filters.tags.length > 0 ||
+    filters.assignedToDiv !== null;
 
   const handleStatusChange = (status: string) => {
     onFilterChange({
@@ -51,11 +60,19 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
     onFilterChange({ ...filters, tags: newTags });
   };
 
+  const handleDivisionChange = (divisionId: number) => {
+    onFilterChange({
+      ...filters,
+      assignedToDiv: filters.assignedToDiv === divisionId ? null : divisionId,
+    });
+  };
+
   const clearFilters = () => {
     onFilterChange({
       status: "",
       dueDateRange: { start: "", end: "" },
       tags: [],
+      assignedToDiv: null,
     });
   };
 
@@ -65,6 +82,8 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
         return <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />;
       case "in_progress":
         return <Clock className="w-3.5 h-3.5 text-blue-500" />;
+      case "overdue":
+        return <AlertCircle className="w-3.5 h-3.5 text-red-700" />;
       case "suspended":
         return <AlertCircle className="w-3.5 h-3.5 text-red-700" />;
       default:
@@ -92,7 +111,8 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
                   (filters.dueDateRange.start || filters.dueDateRange.end
                     ? 1
                     : 0) +
-                  (filters.tags.length > 0 ? 1 : 0)}
+                  (filters.tags.length > 0 ? 1 : 0) +
+                  (filters.assignedToDiv !== null ? 1 : 0)}
               </span>
             )}
           </div>
@@ -125,7 +145,7 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
               Status
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {["in_progress", "completed"].map(
+              {["in_progress", "completed", "overdue"].map(
                 (status) => (
                   <button
                     key={status}
@@ -134,16 +154,22 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
                       filters.status === status
                         ? status === "in_progress"
                           ? "bg-blue-50 border-blue-700 text-blue-700 font-bold"
-                          : "bg-green-50 border-green-700 text-green-700 font-bold"
+                          : status === "completed"
+                          ? "bg-green-50 border-green-700 text-green-700 font-bold"
+                          : "bg-red-50 border-red-700 text-red-700 font-bold"
                         : status === "in_progress"
                         ? "border-blue-200 hover:border-blue-300 text-blue-600"
-                        : "border-green-200 hover:border-green-300 text-green-600"
+                        : status === "completed"
+                        ? "border-green-200 hover:border-green-300 text-green-600"
+                        : "border-red-200 hover:border-red-300 text-red-600"
                     }`}
                   >
                     {getStatusIcon(status)}
                     <span>
                       {status === "in_progress"
                         ? "In Progress"
+                        : status === "overdue"
+                        ? "Overdue"
                         : status.charAt(0).toUpperCase() + status.slice(1)}
                     </span>
                   </button>
@@ -227,6 +253,53 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
             </div>
           )}
 
+          {/* Tasked To (Div) Filter */}
+          {availableDivisions.length > 0 && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                <User className="w-3.5 h-3.5 text-accent" />
+                Tasked To (Div)
+              </label>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {availableDivisions.map((division) => (
+                  <button
+                    key={division.id}
+                    onClick={() => handleDivisionChange(division.id)}
+                    className={`w-full px-3 py-2 rounded border text-xs font-medium flex items-center gap-2 transition-colors ${
+                      filters.assignedToDiv === division.id
+                        ? "bg-accent bg-opacity-10 border-accent text-accent"
+                        : "border-gray-200 hover:border-gray-300 text-gray-600"
+                    }`}
+                  >
+                    <div
+                      className={`w-3 h-3 border-2 rounded flex items-center justify-center ${
+                        filters.assignedToDiv === division.id
+                          ? "bg-accent border-accent"
+                          : "border-gray-300"
+                      }`}
+                    >
+                      {filters.assignedToDiv === division.id && (
+                        <svg
+                          className="w-2 h-2 text-white"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      )}
+                    </div>
+                    <User className="w-3 h-3 text-gray-400" />
+                    <span className="truncate">{division.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Clear Filters */}
           {hasActiveFilters && (
             <button
@@ -256,7 +329,10 @@ const Sidebar = ({ filters, onFilterChange, availableTags }: SidebarProps) => {
             <div className="h-2 w-2 bg-yellow-500 rounded-full mx-auto mb-2"></div>
           )}
           {filters.tags.length > 0 && (
-            <div className="h-2 w-2 bg-blue-500 rounded-full mx-auto"></div>
+            <div className="h-2 w-2 bg-blue-500 rounded-full mx-auto mb-2"></div>
+          )}
+          {filters.assignedToDiv !== null && (
+            <div className="h-2 w-2 bg-purple-500 rounded-full mx-auto"></div>
           )}
         </div>
       )}

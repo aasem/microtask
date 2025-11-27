@@ -32,6 +32,7 @@ const Dashboard = () => {
     status: "",
     dueDateRange: { start: "", end: "" },
     tags: [] as Tag[],
+    assignedToDiv: null as number | null,
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
@@ -110,6 +111,7 @@ const Dashboard = () => {
       status: "",
       dueDateRange: { start: "", end: "" },
       tags: [],
+      assignedToDiv: null,
     });
     setSearchQuery("");
   };
@@ -165,15 +167,6 @@ const Dashboard = () => {
       } catch {
         return "N/A";
       }
-    };
-
-    // Check if task is overdue
-    const isOverdue = (task: Task) => {
-      return (
-        task.due_date &&
-        new Date(task.due_date) < new Date() &&
-        task.status !== "completed"
-      );
     };
 
     // Generate print HTML
@@ -343,7 +336,7 @@ const Dashboard = () => {
           <table>
             <thead>
               <tr>
-                <th style="width: 20px;"></th>
+                <th style="width: 40px;">#</th>
                 <th style="width: 180px;">Title</th>
                 <th style="width: 120px;">Description</th>
                 <th style="width: 80px;">Status</th>
@@ -351,19 +344,18 @@ const Dashboard = () => {
                 <th style="width: 100px;">Due Date</th>
                 <th style="width: 100px;">Division</th>
                 <th style="width: 100px;">Assigned To</th>
-                <th style="width: 120px;">Tags</th>
               </tr>
             </thead>
             <tbody>
-              ${filteredTasks.map((task) => {
+              ${filteredTasks.map((task, index) => {
                 const overdue = isOverdue(task);
                 const colors = getStatusColor(task.status, overdue);
                 const statusText = task.status === "suspended" ? "OVERDUE" : task.status === "in_progress" ? "IN PROGRESS" : task.status.toUpperCase();
                 
                 return `
                   <tr style="background: ${colors.bg};">
-                    <td>
-                      <span class="status-dot" style="background: ${colors.border};"></span>
+                    <td style="color: ${colors.text}; text-align: center; font-weight: 600;">
+                      ${index + 1}
                     </td>
                     <td>
                       <div class="task-title" style="color: ${colors.text}; font-weight: 600;">
@@ -378,17 +370,6 @@ const Dashboard = () => {
                     <td style="color: ${colors.text}; ${overdue ? "font-weight: 600;" : ""}">${task.due_date ? formatDate(task.due_date) : "-"}</td>
                     <td style="color: ${colors.text};">${task.assigned_to_div_name || "-"}</td>
                     <td style="color: ${colors.text};">${task.assigned_to_div_user_name || "-"}</td>
-                    <td>
-                      ${task.tags && task.tags.length > 0 ? `
-                        <div class="tags">
-                          ${task.tags.map(tag => `
-                            <span class="tag" style="background: ${colors.bg}; color: ${colors.text}; border-color: ${colors.border};">
-                              ${tag.name}
-                            </span>
-                          `).join("")}
-                        </div>
-                      ` : "-"}
-                    </td>
                   </tr>
                 `;
               }).join("")}
@@ -416,6 +397,15 @@ const Dashboard = () => {
     }
   };
 
+  // Helper function to check if task is overdue
+  const isOverdue = (task: Task) => {
+    return (
+      task.due_date &&
+      new Date(task.due_date) < new Date() &&
+      task.status !== "completed"
+    );
+  };
+
   // Filter tasks
   const filteredTasks = tasks.filter((task) => {
     // Search filter
@@ -433,8 +423,18 @@ const Dashboard = () => {
     }
 
     // Status filter
-    if (filters.status && task.status !== filters.status) {
-      return false;
+    if (filters.status) {
+      if (filters.status === "overdue") {
+        // For overdue filter, check if task is actually overdue
+        if (!isOverdue(task)) {
+          return false;
+        }
+      } else {
+        // For other status filters, check exact match
+        if (task.status !== filters.status) {
+          return false;
+        }
+      }
     }
 
     // Tags filter
@@ -460,8 +460,25 @@ const Dashboard = () => {
       }
     }
 
+    // Division filter
+    if (filters.assignedToDiv !== null && task.assigned_to_div !== filters.assignedToDiv) {
+      return false;
+    }
+
     return true;
   });
+
+  // Extract unique divisions from tasks
+  const availableDivisions = Array.from(
+    new Map(
+      tasks
+        .filter(task => task.assigned_to_div && task.assigned_to_div_name)
+        .map(task => [task.assigned_to_div, {
+          id: task.assigned_to_div!,
+          name: task.assigned_to_div_name!
+        }])
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
   // Check if any filters are active
   const hasActiveFilters =
@@ -469,6 +486,7 @@ const Dashboard = () => {
     filters.dueDateRange.start ||
     filters.dueDateRange.end ||
     filters.tags.length > 0 ||
+    filters.assignedToDiv !== null ||
     searchQuery.trim() !== "";
 
   return (
@@ -487,6 +505,7 @@ const Dashboard = () => {
               filters={filters} 
               onFilterChange={setFilters} 
               availableTags={availableTags}
+              availableDivisions={availableDivisions}
             />
           </div>
 

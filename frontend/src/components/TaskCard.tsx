@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Edit, Trash2, AlertCircle, Clock, Tag } from "lucide-react";
+import { Calendar, Edit, Trash2, AlertCircle, Clock, Tag, User } from "lucide-react";
 import { Task } from "../services/taskService";
 
 interface TaskCardProps {
@@ -156,6 +156,13 @@ const TaskCard = ({
                 </span>
               )}
               <div className={`flex items-center gap-3 text-xs flex-shrink-0 ${getStatusTextColor(task.status)}`}>
+                {task.assigned_to_div_name && (
+                  <div className="flex items-center gap-1">
+                    <User className="w-3 h-3 opacity-60" />
+                    <span className="font-medium">Assign To:</span>
+                    <span>{task.assigned_to_div_name}</span>
+                  </div>
+                )}
                 {task.assignment_date && (
                   <div className="flex items-center gap-1">
                     <Clock className="w-3 h-3 opacity-60" />

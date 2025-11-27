@@ -128,16 +128,16 @@ const DivUserManagement = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
-            DivUser Management
+            DDG/ADDG Management
           </h2>
           <p className="text-gray-600 mt-1">
-            Manage non-login users for task assignment
+            Manage non-login users (DDG/ADDG) for task assignment
           </p>
         </div>
         {canManage && (
           <button onClick={() => handleOpenModal()} className="btn-primary">
             <Plus className="w-4 h-4" />
-            Add DivUser
+            Add DDG/ADDG
           </button>
         )}
       </div>
