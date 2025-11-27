@@ -143,9 +143,9 @@ const TaskCard = ({
             className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor()} flex-shrink-0 mt-1`}
           />
           
-          {/* Main Content Area */}
-          <div className="flex-1 min-w-0 space-y-2">
-            {/* Title Section */}
+          {/* Two Column Grid Layout */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 flex-1 min-w-0">
+            {/* Column 1, Row 1: Title */}
             <div className="flex items-start gap-2 flex-wrap">
               <h3 className={`text-lg font-bold ${getStatusTextColor(task.status)} break-words flex-1 min-w-0`}>
                 {task.title}
@@ -157,26 +157,12 @@ const TaskCard = ({
               )}
             </div>
 
-            {/* Description Section */}
-            {task.description && (
-              <p className={`text-xs break-words line-clamp-3 opacity-80 ${getStatusTextColor(task.status)}`}>
-                {task.description}
-              </p>
-            )}
-
-            {/* Metadata Section - 2 rows grid */}
-            <div className={`grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs ${getStatusTextColor(task.status)} mt-2 pt-2 border-t border-gray-200 border-opacity-30`}>
-              {task.assigned_to_div_name && (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <User className="w-3 h-3 opacity-60 flex-shrink-0" />
-                  <span className="font-medium flex-shrink-0">Assign To:</span>
-                  <span className="truncate">{task.assigned_to_div_name}</span>
-                </div>
-              )}
+            {/* Column 2, Row 1: Tasked On and Due */}
+            <div className={`flex items-center gap-3 text-xs ${getStatusTextColor(task.status)} flex-wrap`}>
               {task.assignment_date && (
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Clock className="w-3 h-3 opacity-60 flex-shrink-0" />
-                  <span className="font-medium flex-shrink-0">Created:</span>
+                  <span className="font-medium flex-shrink-0">Tasked On:</span>
                   <span className="truncate">{format(new Date(task.assignment_date), "dd/MM/yyyy")}</span>
                 </div>
               )}
@@ -195,6 +181,26 @@ const TaskCard = ({
                   <span className={`truncate ${isOverdue ? "font-semibold" : ""}`}>
                     {format(new Date(task.due_date), "dd/MM/yyyy, HH:mm")}
                   </span>
+                </div>
+              )}
+            </div>
+
+            {/* Column 1, Row 2: Description */}
+            <div>
+              {task.description && (
+                <p className={`text-xs break-words line-clamp-3 opacity-80 ${getStatusTextColor(task.status)}`}>
+                  {task.description}
+                </p>
+              )}
+            </div>
+
+            {/* Column 2, Row 2: Assign To and Tags */}
+            <div className={`flex items-center gap-3 text-xs ${getStatusTextColor(task.status)} flex-wrap`}>
+              {task.assigned_to_div_name && (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <User className="w-3 h-3 opacity-60 flex-shrink-0" />
+                  <span className="font-medium flex-shrink-0">Assign To:</span>
+                  <span className="truncate">{task.assigned_to_div_name}</span>
                 </div>
               )}
               {task.tags && task.tags.length > 0 && (
