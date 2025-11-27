@@ -140,79 +140,82 @@ const TaskCard = ({
         <div className="flex items-start gap-3 flex-1 min-w-0">
           {/* Status Dot */}
           <span
-            className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor()} flex-shrink-0 mt-0.5`}
+            className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor()} flex-shrink-0 mt-1`}
           />
           
-          {/* Title, Description and Metadata */}
-          <div className="flex-1 min-w-0">
-            {/* Title and Metadata in same line */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <h3 className={`text-lg font-bold ${getStatusTextColor(task.status)}`}>
+          {/* Main Content Area */}
+          <div className="flex-1 min-w-0 space-y-2">
+            {/* Title Section */}
+            <div className="flex items-start gap-2 flex-wrap">
+              <h3 className={`text-lg font-bold ${getStatusTextColor(task.status)} break-words flex-1 min-w-0`}>
                 {task.title}
               </h3>
               {isOverdue && (
-                <span title="Overdue" className="text-red-700 flex-shrink-0">
+                <span title="Overdue" className="text-red-700 flex-shrink-0 mt-0.5">
                   <AlertCircle className="w-4 h-4" />
                 </span>
               )}
-              <div className={`flex items-center gap-3 text-xs flex-shrink-0 ${getStatusTextColor(task.status)}`}>
-                {task.assigned_to_div_name && (
-                  <div className="flex items-center gap-1">
-                    <User className="w-3 h-3 opacity-60" />
-                    <span className="font-medium">Assign To:</span>
-                    <span>{task.assigned_to_div_name}</span>
-                  </div>
-                )}
-                {task.assignment_date && (
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3 opacity-60" />
-                    <span className="font-medium">Created:</span>
-                    <span>{format(new Date(task.assignment_date), "dd/MM/yyyy")}</span>
-                  </div>
-                )}
-                {task.due_date && (
-                  <div
-                  className={`flex items-center gap-1 ${
+            </div>
+
+            {/* Description Section */}
+            {task.description && (
+              <p className={`text-xs break-words line-clamp-3 opacity-80 ${getStatusTextColor(task.status)}`}>
+                {task.description}
+              </p>
+            )}
+
+            {/* Metadata Section - 2 rows grid */}
+            <div className={`grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs ${getStatusTextColor(task.status)} mt-2 pt-2 border-t border-gray-200 border-opacity-30`}>
+              {task.assigned_to_div_name && (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <User className="w-3 h-3 opacity-60 flex-shrink-0" />
+                  <span className="font-medium flex-shrink-0">Assign To:</span>
+                  <span className="truncate">{task.assigned_to_div_name}</span>
+                </div>
+              )}
+              {task.assignment_date && (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Clock className="w-3 h-3 opacity-60 flex-shrink-0" />
+                  <span className="font-medium flex-shrink-0">Created:</span>
+                  <span className="truncate">{format(new Date(task.assignment_date), "dd/MM/yyyy")}</span>
+                </div>
+              )}
+              {task.due_date && (
+                <div
+                  className={`flex items-center gap-1.5 min-w-0 ${
                     isOverdue ? "text-red-700" : ""
                   }`}
                 >
                   <Calendar
-                    className={`w-3 h-3 ${
+                    className={`w-3 h-3 flex-shrink-0 ${
                       isOverdue ? "text-red-700" : "opacity-60"
                     }`}
                   />
-                    <span className="font-medium">Due:</span>
-                    <span className={isOverdue ? "font-semibold" : ""}>
-                      {format(new Date(task.due_date), "dd/MM/yyyy, HH:mm")}
-                    </span>
+                  <span className="font-medium flex-shrink-0">Due:</span>
+                  <span className={`truncate ${isOverdue ? "font-semibold" : ""}`}>
+                    {format(new Date(task.due_date), "dd/MM/yyyy, HH:mm")}
+                  </span>
+                </div>
+              )}
+              {task.tags && task.tags.length > 0 && (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Tag className={`w-3 h-3 opacity-70 flex-shrink-0 ${getStatusTagColor().icon}`} />
+                  <div className="flex gap-1 flex-wrap min-w-0">
+                    {task.tags.map((tag) => {
+                      const tagColors = getStatusTagColor();
+                      return (
+                        <span
+                          key={tag.id}
+                          className={`badge ${tagColors.bg} ${tagColors.text} border ${tagColors.border} border-opacity-30 text-xs px-1.5 py-0.5 flex-shrink-0`}
+                        >
+                          {tag.name}
+                        </span>
+                      );
+                    })}
                   </div>
-                )}
-                {task.tags && task.tags.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Tag className={`w-3 h-3 opacity-70 ${getStatusTagColor().icon}`} />
-                    <div className="flex gap-1">
-                      {task.tags.map((tag) => {
-                        const tagColors = getStatusTagColor();
-                        return (
-                          <span
-                            key={tag.id}
-                            className={`badge ${tagColors.bg} ${tagColors.text} border ${tagColors.border} border-opacity-30 text-xs px-1.5 py-0.5`}
-                          >
-                            {tag.name}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-            {/* Description below */}
-            {task.description && (
-              <p className={`text-xs mt-1 line-clamp-2 opacity-80 ${getStatusTextColor(task.status)}`}>
-                {task.description}
-              </p>
-            )}
           </div>
         </div>
 
